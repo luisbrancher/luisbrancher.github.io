@@ -1,0 +1,124 @@
+direction: down
+
+classes: {
+  vlan_trusted: {
+    style: {
+      stroke: "#10b981"
+      stroke-width: 2
+      fill: "#10b981"
+      opacity: 0.3
+    }
+  }
+  vlan_untrusted: {
+    style: {
+      stroke: "#0b55f5"
+      stroke-width: 2
+      fill: "#0b55f5"
+      opacity: 0.3
+    }
+  }
+  vlan_lab: {
+    style: {
+      stroke: "#da9e1c"
+      stroke-width: 2
+      fill: "#da9e1c"
+      opacity: 0.3
+    }
+  }
+  vlan_guest: {
+    style: {
+      stroke: "#862bc3"
+      stroke-width: 2
+      fill: "#862bc3"
+      opacity: 0.2
+    }
+  }
+}
+
+WAN: {
+  Internet: {shape: cloud}
+}
+
+ISP_Modem: ISP Modem (Bridge Mode)
+OPNsense: OPNsense Firewall {shape: rectangle}
+Switch: 2.5GbE Managed Switch {shape: rectangle}
+WiFi_AP: Omada WiFi 6 AP
+
+# VLANs
+VLAN_Trusted: {
+  class: vlan_trusted
+  label: "VLAN Trusted (ID 10)"
+
+  Workstation: Ryzen 9 Workstation
+  MBA: MacBook Air
+  MBP: MacBook Pro
+  Pixel: Google Pixel
+  iPhone: iPhone
+
+  Server_Node: Server Node (i5-1345u) {
+    Docker_Services: {
+      Wazuh
+      Omada
+      Portainer
+      Immich
+      MotionEye
+      Jellyfin
+      UpSnap
+    }
+  }
+}
+
+VLAN_Untrusted: {
+  class: vlan_untrusted
+  label: "VLAN Untrusted / IoT (ID 20)"
+
+  Alexa
+  Camera_IP
+  TV
+  SmartLight
+}
+
+VLAN_Lab: {
+  class: vlan_lab
+  label: "VLAN Labs (ID 30)"
+
+  Dell_G3: Dell G3 Laptop
+  RPi: Raspberry Pi
+}
+
+VLAN_Guest: {
+  class: vlan_guest
+  label: "VLAN Guest (ID 40)"
+}
+
+# --- CONNECTIONS ---
+
+WAN.Internet -> ISP_Modem
+ISP_Modem -> OPNsense
+OPNsense -> Switch
+
+# Physical Connections
+Switch -> VLAN_Trusted.Workstation
+Switch -> VLAN_Trusted.Server_Node: Ethernet 2.5G
+Switch -> VLAN_Lab.Dell_G3: Ethernet
+Switch -> VLAN_Lab.RPi: Ethernet
+Switch -> WiFi_AP: PoE+
+
+# Wi-Fi (segmented by VLAN)
+WiFi_AP -> VLAN_Trusted.MBA
+WiFi_AP -> VLAN_Trusted.MBP
+WiFi_AP -> VLAN_Trusted.Pixel
+WiFi_AP -> VLAN_Trusted.iPhone
+
+WiFi_AP -> VLAN_Untrusted.Alexa
+WiFi_AP -> VLAN_Untrusted.TV
+WiFi_AP -> VLAN_Untrusted.SmartLight
+
+WiFi_AP -> VLAN_Guest
+
+# VPN
+Tailscale_VPN: Tailscale VPN
+Tailscale_VPN <-> OPNsense: WireGuard Tunnel
+
+# Rules
+VLAN_Trusted -> VLAN_Untrusted: Controlled Inter-VLAN Access

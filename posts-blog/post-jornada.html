@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jornada Homelab | DevOps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navegação (Copiada do padrão) -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex space-x-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-4 ml-2 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-jornada-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-02-10">10 Fev 2026</time>
+                <span>•</span>
+                <span>5 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                De um Raspberry Pi com HD velho a um servidor completo em casa
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Homelab</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Linux</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Career Journey</span>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">
+                Tudo começou com uma mistura de curiosidade e avareza. Eu queria mais espaço em nuvem, mas não queria pagar por isso.
+            </p>
+            <p class="leading-relaxed">
+                Eu tinha alguns HDs antigos parados e comecei a pesquisar como poderia acessá-los pela internet direto de casa. Já tinha uma noção básica de rede — lá por 2000 eu abria portas no roteador pra jogar CS com amigos — então esse foi meu primeiro instinto.
+            </p>
+            <p class="leading-relaxed">
+                Só que pesquisando melhor, descobri que esse modelo de simplesmente expor portas já não era a melhor prática. Foi aí que entrei no mundo de VPNs, e a partir disso acabei caindo num buraco bem mais fundo: homelab.
+            </p>
+            
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> O começo: Raspberry Pi e primeiras tentativas
+            </h2>
+            <p class="leading-relaxed">
+                Eu já tinha um certo conhecimento de hardware por causa do meu trabalho como editor de vídeo. Sofri bastante com máquinas ruins ao longo dos anos, então fui obrigado a aprender na prática sobre CPU, GPU, RAM e como cada peça impacta performance.
+            </p>
+            <p class="leading-relaxed">
+                Também tinha um Raspberry Pi 4 parado na gaveta (que comprei no passado pra emulação), então resolvi usar ele como ponto de partida.
+            </h2>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>conectei os HDs nele</li>
+                <li>comecei com Raspberry OS</li>
+                <li>acesso apenas via LAN</li>
+            </ul>
+            <p class="leading-relaxed">
+                Depois tentei subir um Ubuntu Server, mas travei na CLI. Ainda não tinha base suficiente.
+            </p>
+            <p class="leading-relaxed">
+                Acabei indo para o OMV (OpenMediaVault), que foi o primeiro setup que realmente funcionou como NAS.
+            </p>
+            <p class="leading-relaxed">
+                Cheguei até a configurar Tailscale nele, mas na prática eu não usava como “nuvem” ainda — era mais um storage local com backup na rede. Também comecei a brincar com coisas como Pi-hole.
+            </p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> O ponto de virada: interesse real em infra
+            </h2>
+            <p class="leading-relaxed">
+                Esse foi o ponto de entrada. A partir daí comecei a estudar mais por conta própria:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>redes</li>
+                <li>comunicação entre máquinas</li>
+                <li>segurança e privacidade</li>
+                <li>ferramentas open source</li>
+            </ul>
+            <p class="leading-relaxed">
+                Foi justamente quando comecei a mergulhar no mundo open source que passei a pegar gosto de verdade por Linux e linha de comando. No começo eu travava fácil, hoje já me sinto muito mais confortável navegando, debugando e entendendo o que está acontecendo no sistema.
+            </p>
+            <p class="leading-relaxed">
+                Uma coisa foi puxando a outra. Comecei a fazer cursos, estudar cibersegurança e entender melhor o que estava fazendo — não só copiar tutorial.
+            </p>
+            <p class="leading-relaxed">
+                Com isso vieram novos experimentos:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>Wazuh (SIEM)</li>
+                <li>Suricata (IDS/IPS)</li>
+                <li>hardening de dispositivos</li>
+                <li>testes com VMs (VirtualBox / VMware)</li>
+                <li>labs de pentest e SOC</li>
+            </ul>
+            <p class="leading-relaxed">
+                Nesse ponto, o Raspberry já não dava mais conta.
+            </p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Upgrade: servidor dedicado com hardware reaproveitado
+            </h2>
+            <p class="leading-relaxed">
+                Em um upgrade da minha workstation de trabalho, aproveitei as peças antigas e montei meu servidor atual. Hoje ele roda com:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>Ryzen 7 5800X</li>
+                <li>16GB RAM</li>
+                <li>GT 1030</li>
+            </ul>
+            <p class="leading-relaxed">
+                Inicialmente voltei para Ubuntu Server e subi tudo manualmente (Wazuh + outros serviços), mas depois de algumas quebras e perder dias em troubleshooting, percebi que estava gastando mais tempo mantendo do que aprendendo.
+            </p>
+            <p class="leading-relaxed">
+                Foi aí que decidi simplificar e migrar para o ZimaOS.
+            </p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Setup atual
+            </h2>
+            <p class="leading-relaxed">Hoje o servidor roda:</p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li><strong>ZimaOS</strong> como base</li>
+                <li><strong>Immich</strong> → nuvem pessoal de fotos</li>
+                <li><strong>Jellyfin</strong> → media server</li>
+                <li><strong>Zima (NAS)</strong> → arquivos</li>
+                <li><strong>Tailscale</strong> → acesso remoto via VPN</li>
+                <li><strong>UpSnap</strong> → Wake-on-LAN remoto</li>
+                <li><strong>MotionEye</strong> → monitoramento da câmera IP</li>
+            </ul>
+            <p class="leading-relaxed">Além disso:</p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>uso como subnet router no Tailscale</li>
+                <li>uso como exit node para acessar minha rede do Brasil</li>
+            </ul>
+            <p class="leading-relaxed">
+                E continuo usando VMs pra testar coisas novas antes de levar pro servidor.
+            </p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> O que mudou na prática
+            </h2>
+            <p class="leading-relaxed">O projeto começou só como “quero mais armazenamento sem pagar”. Virou:</p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>ambiente de aprendizado real</li>
+                <li>laboratório de redes e segurança</li>
+                <li>base pra estudar infraestrutura</li>
+                <li>e hoje influencia diretamente minha transição de carreira</li>
+            </ul>
+
+            <div class="p-6 bg-zinc-900/30 border border-zinc-800 rounded-lg mt-10">
+                <h3 class="text-xl font-bold text-zinc-200 mb-3 flex items-center gap-2"><span class="text-emerald-500">#</span> Conclusão</h3>
+                <p class="leading-relaxed">Não foi um caminho linear. Teve:</p>
+                <ul class="list-disc list-inside space-y-2 mb-4 ml-4 text-sm">
+                    <li>tentativa que não funcionou</li>
+                    <li>quebra de sistema</li>
+                    <li>tempo perdido debugando coisa errada</li>
+                </ul>
+                <p class="leading-relaxed text-sm">
+                    Mas foi justamente isso que fez eu entender o que estava fazendo. Hoje o servidor resolve problemas reais pra mim (backup, acesso remoto, mídia, etc.) e ao mesmo tempo virou meu principal laboratório.
+                </p>
+                <p class="leading-relaxed font-bold text-emerald-400 mt-4">
+                    E foi esse processo que me fez migrar o interesse de edição de vídeo para infraestrutura e DevOps.
+                </p>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>

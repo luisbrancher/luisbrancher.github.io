@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Do ClickOps ao código: IaC com Terraform | DevOps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .tab-button.active {
+            background-color: #10B981; /* emerald-500 */
+            color: #f0fdf4; /* emerald-50 */
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex space-x-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-4 ml-2 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-iac-terraform-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-03-27">27 Mar 2026</time>
+                <span>•</span>
+                <span>8 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Do ClickOps ao código: minha primeira IaC com Terraform na AWS
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TERRAFORM</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">AWS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">IAC</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">SECURITY</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">DEVOPS</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/personal-site-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> Acessar repositório no GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">Estou viajando e resolvi aproveitar o tempo pra construir a infraestrutura do meu site pessoal do zero usando Terraform. Não só "subir um servidor", mas fazer isso direito: como código, com segurança, sem credenciais expostas no notebook. Este artigo documenta essa jornada em dois dias de trabalho. Da primeira linha de HCL até uma infraestrutura modular, com VPC própria, IAM com privilégio mínimo e hardening desde o boot.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Dia 01 — Sair do console e escrever o primeiro código</h2>
+            <p class="leading-relaxed">Meu primeiro instinto foi abrir o console da AWS e clicar em tudo. É o caminho mais fácil. Mas o ponto de partida do projeto era justamente esse: parar de fazer ClickOps e tratar infraestrutura como código.</p>
+            <p class="leading-relaxed">Escolhi o Terraform com backend remoto no HCP Terraform. Motivo prático: estou em viagem, em redes diferentes toda semana. Não faz sentido manter o <code>.tfstate</code> no disco — ele ficaria desatualizado ou exposto. No HCP, o estado fica criptografado na nuvem e acessível de qualquer lugar.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">A estrutura inicial</h3>
+            <p class="leading-relaxed">O primeiro código foi tudo num único <code>main.tf</code>. IAM, EC2, Security Group, chave SSH — tudo junto. Funcionava, mas já dava pra ver que não ia escalar.</p>
+            <p class="leading-relaxed">A identidade foi o primeiro ponto de atenção. Em vez de usar a conta root (que nunca deveria ser usada pra operações do dia a dia), criei um grupo de provisionamento com permissões restritas e um usuário operacional vinculado a ele.</p>
+            <p class="leading-relaxed">O problema? Nessa primeira versão, eu estava gerando as access keys dentro do próprio Terraform e expondo no output:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code><span class="text-zinc-500"># PRATICA RUIM - REVER</span>
+resource "aws_iam_access_key" "user_key" {
+  user = aws_iam_user.terraform_user.name
+}
+
+output "secret_access_key" {
+  value     = aws_iam_access_key.user_key.secret
+  sensitive = true
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">Eu mesmo marquei como <code># PRATICA RUIM</code> no código. O problema não é só expor no terminal — é o fato de que credenciais geradas via Terraform ficam gravadas no <code>.tfstate</code>. Mesmo com <code>sensitive = true</code>, estão lá, em texto, no arquivo de estado. Isso foi corrigido no dia seguinte.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">EC2, SSH e o primeiro servidor</h3>
+            <p class="leading-relaxed">Para a instância, escolhi Debian 13 na arquitetura ARM64 (t4g.micro). A combinação de free tier com ARM já é usada em produção por empresas sérias e também é mais economica que uma nstancia x84, mas não é só economia, é uma escolha técnica defensável.</p>
+            <p class="leading-relaxed">O par de chaves SSH foi injetado via Terraform usando ED25519, mais seguro e mais compacto que RSA. A chave pública vai pro servidor no momento da criação. A privada fica só no meu notebook, protegida por senha.</p>
+            <p class="leading-relaxed">Com o <code>terraform apply</code>, toda a estrutura que levaria 15 minutos no console ficou pronta em menos de 60 segundos. Isso foi o primeiro momento em que IaC deixou de ser conceito e virou prática.</p>
+            <p class="leading-relaxed">Esse foi o código ao fim do primeiro dia:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 max-h-60 custom-scrollbar">
+<pre class="text-sm text-emerald-400"><code>terraform {
+# main.tf
+terraform {
+  # define local para o .tfstate
+  cloud {
+    organization = "lfck" # armazenamento do estado no HCP Terraform
+
+    workspaces {
+      name = "aws-debian-site"
+    }
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  required_version = ">= 1.2.0"
+}
+
+<span class="text-zinc-500"># cria um grupo para o user terraform</span>
+resource "aws_iam_group" "terraform_group" {
+  name = "terraform-provisioners-group"
+}
+
+<span class="text-zinc-500"># cria o user terraform</span>
+resource "aws_iam_user" "terraform_user" {
+  name = "terraform-operator"
+
+  tags = {
+    Environment = "Prod"
+    Project     = "MeuSite"
+  }
+}
+
+# add terraform user to terraform group
+resource "aws_iam_group_membership" "terraform_team" {
+  name = "terraform-membership"
+
+  users = [
+    aws_iam_user.terraform_user.name
+  ]
+
+  group = aws_iam_group.terraform_group.name
+}
+
+<span class="text-zinc-500"># define as politicas de gruop (ec2 + vpc)</span>
+resource "aws_iam_group_policy_attachment" "ec2_access" {
+  group      = aws_iam_group.terraform_group.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
+}
+
+resource "aws_iam_group_policy_attachment" "vpc_access" {
+  group      = aws_iam_group.terraform_group.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+}
+
+<span class="text-zinc-500"># gera a key de acesso - PRATICA RUIM - REVER</span>
+resource "aws_iam_access_key" "user_key" {
+  user = aws_iam_user.terraform_user.name
+}
+
+<span class="text-zinc-500"># output da key - PRATICA RUIM - REVER</span>
+output "access_key_id" {
+  value     = aws_iam_access_key.user_key.id
+  sensitive = true <span class="text-zinc-500"># nao mostra no terminal</span>
+}
+
+<span class="text-zinc-500"># output da key - PRATICA RUIM - REVER</span>
+output "secret_access_key" {
+  value     = aws_iam_access_key.user_key.secret
+  sensitive = true <span class="text-zinc-500"># nao mostra no terminal</span>
+}
+
+<span class="text-zinc-500"># set AWS provider</span>
+provider "aws" {
+  region = "sa-east-1" <span class="text-zinc-500"># Região AZ</span>
+}
+
+<span class="text-zinc-500"># cria par de chaves para SSH</span>
+resource "aws_key_pair" "chave_ssh" {
+  key_name   = "chave-debian-server"
+  public_key = file("~/.ssh/id_ed25519.pub")
+}
+
+<span class="text-zinc-500"># Security Group para liberar o tráfego do site</span>
+resource "aws_security_group" "web_sg" {
+  name        = "web_server_dev_sg"
+  description = "Acesso seguro para dominio .dev"
+
+  <span class="text-zinc-500"># HTTPS para .dev</span>
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # SSH
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # server can access the web
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+<span class="text-zinc-500"># create EC2 instance</span>
+resource "aws_instance" "server_debian" {
+  <span class="text-zinc-500"># AMI do Debian 13 arquitetura arm64 na região sa-east-1</span>
+  ami           = "ami-0acd214583e63a88e"
+  instance_type = "t4g.micro" <span class="text-zinc-500"># Free Tier (arquitetura Arm)</span>
+
+  vpc_security_group_ids = [aws_security_group.web_sg.id]  <span class="text-zinc-500"># atribui o SG à instância</span>
+  key_name               = aws_key_pair.chave_ssh.key_name <span class="text-zinc-500"># atribui a chave SSH</span>
+
+  <span class="text-zinc-500"># tag para facilitar a identificação</span>
+  tags = {
+    Name        = "Instancia-Debian-13-T4g"
+    Environment = "Dev"
+  }
+}
+
+<span class="text-zinc-500"># Exibe o IP público da instância após a criação</span>
+output "ip_publico" {
+  description = "Endereço IP público da instância EC2"
+  value       = aws_instance.server_debian.public_ip
+}
+</code></pre>
+            </div>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Dia 02 — De "funciona" para "seguro e sustentável"</h2>
+            <p class="leading-relaxed">No segundo dia o objetivo mudou. Não era mais "fazer funcionar" — era pensar como alguém da área: o que estou expondo? quem tem acesso? o que pode dar errado?</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Estrutura modular</h3>
+            <p class="leading-relaxed">A primeira coisa foi quebrar o <code>main.tf</code> em arquivos organizados por responsabilidade:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li><code>provider.tf</code> → configuração do provider e backend</li>
+                <li><code>iam.tf</code> → usuários, grupos e políticas</li>
+                <li><code>network.tf</code> → VPC, subnet, gateway, rotas</li>
+                <li><code>ec2.tf</code> → definição da instância</li>
+                <li><code>variables.tf</code> → valores reutilizáveis</li>
+                <li><code>outputs.tf</code> → saídas pós-apply</li>
+            </ul>
+            <p class="leading-relaxed">Parece óbvio, mas faz diferença na prática. Quando precisei ajustar a política IAM, abri só o <code>iam.tf</code>. Quando quis mudar a região, alterei a variável em um lugar só.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">VPC própria: Security by Design</h3>
+            <p class="leading-relaxed">Na primeira versão, a instância usava a VPC default da AWS. Funciona, mas não é o que você quer num ambiente que vai hospedar um site real. A VPC default foi criada pra conveniência, não pra segurança.</p>
+            <p class="leading-relaxed">Criei uma VPC própria com subnet pública, Internet Gateway e route table explícita. A cadeia completa em código:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>resource "aws_vpc" "main_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+}
+
+resource "aws_subnet" "public_subnet" {
+  vpc_id     = aws_vpc.main_vpc.id
+  cidr_block = "10.0.1.0/24"
+}
+
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main_vpc.id
+}
+
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">O Security Group foi vinculado a essa VPC, e a instância foi colocada na subnet. Tudo conectado explicitamente, sem depender de defaults que eu não controlo.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">IAM com privilégio mínimo — e uma trava financeira</h3>
+            <p class="leading-relaxed">Na v1 eu tinha usado <code>AmazonEC2FullAccess</code>. É o atalho que todo tutorial mostra. O problema é que ele dá muito mais poder do que o necessário — e poder desnecessário é superfície de ataque.</p>
+            <p class="leading-relaxed">Refatorei para uma policy custom com exatamente as ações que o Terraform precisa: criar e destruir instâncias, gerenciar Security Groups, criar key pairs, descrever recursos. Nada além disso.</p>
+            <p class="leading-relaxed">O detalhe mais interessante foi adicionar um <code>Deny</code> explícito para instance types fora do free tier:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>{
+  "Sid": "DenyNonFreeTierInstances",
+  "Effect": "Deny",
+  "Action": "ec2:RunInstances",
+  "Resource": "*",
+  "Condition": {
+    "StringNotEquals": {
+      "ec2:InstanceType": "t4g.micro"
+    }
+  }
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">A diferença entre um <code>Allow</code> restritivo e um <code>Deny</code> explícito é importante: o Deny sempre vence, independente de qualquer outra política anexada ao usuário. Se amanhã alguém adicionar uma política mais ampla ao grupo por engano, essa trava ainda se mantém. É defense in depth no nível do IAM.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Hardening desde o boot</h3>
+            <p class="leading-relaxed">Em vez de subir a instância e configurar o SSH depois, coloquei o hardening direto no <code>user_data</code>. O servidor já nasce configurado:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>user_data = &lt;&lt;-EOF
+  #!/bin/bash
+  set -e
+  sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+  sed -i 's/^#\?PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+  systemctl restart ssh || systemctl restart sshd
+EOF</code></pre>
+            </div>
+            <p class="leading-relaxed">Login por senha: bloqueado. Root: bloqueado. Autenticação: só via chave. Não tem "vou configurar depois" — já nasceu assim.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">SSH aberto: decisão consciente, não descuido</h3>
+            <p class="leading-relaxed">O Security Group ainda aceita SSH de qualquer IP (0.0.0.0/0). Parece um problema — e seria, se fosse ignorância. Mas é uma decisão temporária e documentada no código:</p>
+            <p class="leading-relaxed italic text-zinc-500"># Migrar para Tailscale | usando global pois estou em viagem sem IP fixo</p>
+            <p class="leading-relaxed">A estratégia é em dois tempos. Fase 1: SSH aberto pro bootstrap inicial, com acesso protegido por chave ED25519 e root bloqueado. Fase 2: instalar Tailscale via Ansible, fechar a porta 22, e mover o acesso pra rede privada. O acesso público deixa de existir.</p>
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Variáveis e tags globais</h3>
+            <p class="leading-relaxed">O último ajuste foi extrair os valores que poderiam mudar para um <code>variables.tf</code> — região, tipo de instância, nome do projeto. Sem isso, qualquer mudança vira uma caça ao valor espalhado em vários arquivos.</p>
+            <p class="leading-relaxed">Combinado com <code>default_tags</code> no provider, as tags <code>ManagedBy</code>, <code>Project</code> e <code>Owner</code> são aplicadas automaticamente em todos os recursos sem repetição:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      ManagedBy = "terraform"
+      Project   = "meusite.dev"
+      Owner     = "luisfuck"
+    }
+  }
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">A tag <code>ManagedBy = "terraform"</code> tem um valor prático claro: quando você abrir o console da AWS daqui a seis meses, sabe imediatamente que não pode sair alterando aquele recurso manualmente sem quebrar o estado.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Destaques técnicos da evolução</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Arquivo</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Mudança</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Por quê importa</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top"><code>ec2.tf</code></td>
+                            <td class="p-3 align-top">Data source pra AMI</td>
+                            <td class="p-3 align-top">Sempre pega a versão mais recente do Debian 13 ARM. Sem AMI hardcoded que quebra com o tempo.</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top"><code>ec2.tf</code></td>
+                            <td class="p-3 align-top">Hardening via user_data</td>
+                            <td class="p-3 align-top">Servidor nasce configurado. Sem etapa manual pós-deploy.</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top"><code>network.tf</code></td>
+                            <td class="p-3 align-top">VPC própria</td>
+                            <td class="p-3 align-top">Isolamento real. Sem depender da VPC default que qualquer recurso da conta compartilha.</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top"><code>iam.tf</code></td>
+                            <td class="p-3 align-top">Policy custom com Deny</td>
+                            <td class="p-3 align-top">Saiu do FullAccess pra least privilege. O Deny para instance types caros é uma trava que não pode ser sobrescrita por outras políticas.</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top"><code>iam.tf</code></td>
+                            <td class="p-3 align-top">Sem access keys no código</td>
+                            <td class="p-3 align-top">Credenciais geradas via Terraform ficam no .tfstate em texto. Criadas manualmente e armazenadas no HCP como variáveis sensíveis.</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 align-top"><code>variables.tf</code></td>
+                            <td class="p-3 align-top">Valores extraídos</td>
+                            <td class="p-3 align-top">Região, instance type, nome do projeto. Um lugar pra mudar, efeito em todos os arquivos.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Próximos passos</h2>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li>Provisionar o servidor via <code>Ansible</code> — instalar Tailscale, configurar nginx, certificado SSL pro domínio .dev</li>
+                <li>Fechar a porta 22 e mover acesso pra rede privada via Tailscale</li>
+                <li>Evoluir o IAM — migrar pra IAM Identity Center e eliminar access keys de longa duração</li>
+                <li>Explorar OIDC pra autenticação sem chaves em pipelines</li>
+            </ul>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 O que ficou</h3>
+                <p class="leading-relaxed text-zinc-300">A maior mudança não foi técnica. Foi parar de pensar "como faço funcionar?" e começar a pensar "como faço isso de forma segura e sustentável?". Isso muda o que você escreve, o que você questiona, e o que você anota no código quando sabe que uma decisão é temporária.</p>
+                <p class="leading-relaxed text-zinc-300 mt-4">A infraestrutura agora é efêmera: posso destruí-la e reconstruí-la de qualquer lugar do mundo com um único comando. Isso, mais do que qualquer feature específica, é o ponto de IaC.</p>
+            </div>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-12 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Códigos ao final do segundo dia</h2>
+
+            <!-- Tabbed Code Block -->
+            <div id="code-tabs-container" class="mt-0">
+                <div class="flex border-b border-zinc-700 mb-0">
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700 active" data-target="tab-provider">provider.tf</button>
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700" data-target="tab-network">network.tf</button>                    
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700" data-target="tab-iam">iam.tf</button>
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700" data-target="tab-ec2">ec2.tf</button>
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700" data-target="tab-variables">variables.tf</button>
+                    <button class="tab-button text-xs px-4 py-2 transition-colors duration-200 hover:bg-zinc-700" data-target="tab-outputs">outputs.tf</button>
+                </div>
+                <div class="bg-zinc-900 border border-t-0 border-zinc-800 rounded-b p-4 overflow-x-auto">
+                    <div id="tab-provider" class="tab-content">
+<pre class="text-sm text-emerald-400"><code>terraform {
+  cloud {
+    organization = "devops-journey"
+    workspaces { name = "meusite-dev" }
+  }
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~&gt; 5.0"
+    }
+  }
+  required_version = "&gt;= 1.2.0"
+}
+
+<span class="text-zinc-500"># set AWS provider</span>
+provider "aws" {
+  region = var.aws_region <span class="text-zinc-500"># Região AZ</span>
+
+  default_tags {
+    tags = {
+      ManagedBy = "terraform"
+      Project   = "meusite.dev"
+      Owner     = "luisfuck"
+    }
+  }
+}</code></pre>
+                    </div>
+                    <div id="tab-network" class="tab-content hidden">
+<pre class="text-sm text-emerald-400"><code><span class="text-zinc-500"># cria main VPC</span>
+resource "aws_vpc" "main_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
+  enable_dns_hostnames = true <span class="text-zinc-500"># para dominio .dev</span>
+
+  tags = { Name = "VPC-${var.project_name}" }
+}
+
+<span class="text-zinc-500"># cria a subnet pública</span>
+resource "aws_subnet" "public_subnet" {
+  vpc_id     = aws_vpc.main_vpc.id
+  cidr_block = "10.0.1.0/24"
+
+  tags = { Name = "subnet-${var.project_name}" }
+}
+
+<span class="text-zinc-500"># cria gateway</span>
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  tags = { Name = "IGW-${var.project_name}" }
+}
+
+<span class="text-zinc-500"># route table</span>
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main_vpc.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = { Name = "rota-publica${var.project_name}" }
+}
+
+<span class="text-zinc-500"># linka subnet a route table</span>
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+
+<span class="text-zinc-500"># Security Group para liberar o tráfego do site</span>
+resource "aws_security_group" "web_sg" {
+  name_prefix = "web-sg-" <span class="text-zinc-500">#name_prefix evita conflito de nomes</span>
+  description = "Acesso seguro para dominio .dev"
+  vpc_id      = aws_vpc.main_vpc.id <span class="text-zinc-500"># vincula o SG a VPC</span>
+
+  <span class="text-zinc-500"># HTTPS</span>
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  <span class="text-zinc-500"># SSH</span>
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Migrar para tailscale | usando global pois codei em viagem e nao possuia IP fixo
+  }
+
+  <span class="text-zinc-500"># server can access the web</span>
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}</code></pre>
+                    </div>
+                    <div id="tab-iam" class="tab-content hidden">
+<pre class="text-sm text-emerald-400"><code><span class="text-zinc-500"># cria um grupo para o user terraform</span>
+resource "aws_iam_group" "terraform_group" {
+  name = "terraform-provisioners-group"
+}
+
+<span class="text-zinc-500"># define as politicas minimas de grupo para EC2 + SG</span>
+resource "aws_iam_policy" "ec2_minimal" {
+  name        = "terraform-ec2-minimal"
+  description = "Permissões mínimas para EC2 + SG"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EC2BasicManagement"
+        Effect = "Allow"
+        Action = [
+          "ec2:RunInstances",
+          "ec2:TerminateInstances",
+          "ec2:StartInstances",
+          "ec2:StopInstances",
+          "ec2:CreateVpc",
+          "ec2:CreateSubnet",
+          "ec2:CreateRouteTable",
+          "ec2:CreateInternetGateway",
+          "ec2:AttachInternetGateway",
+          "ec2:AssociateRouteTable"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "EC2Describe"
+        Effect = "Allow"
+        Action = [
+          "ec2:Describe*"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "SecurityGroupManagement"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupEgress"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "KeyPairManagement"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateKeyPair",
+          "ec2:DeleteKeyPair",
+          "ec2:ImportKeyPair"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "DenyNonFreeTierInstances"
+        Effect = "Deny"
+        Action = "ec2:RunInstances"
+        Resource = "*"
+        Condition = {
+          StringNotEquals = {
+            "ec2:InstanceType" = "t4g.micro"
+          }
+        }
+      }
+    ]
+  })
+}
+
+<span class="text-zinc-500"># atribui as politicas de gruop (ec2 + sg)</span>
+resource "aws_iam_group_policy_attachment" "ec2_minimal_attach" {
+  group      = aws_iam_group.terraform_group.name
+  policy_arn = aws_iam_policy.ec2_minimal.arn
+}
+
+
+<span class="text-zinc-500"># cria o user terraform</span>
+<span class="text-zinc-500"># NOTA: Este recurso documenta o usuário operacional boa pratica substituir no futuro</span>
+<span class="text-zinc-500">#       por IAM Identity Center + SSO.</span>
+resource "aws_iam_user" "terraform_user" {
+  name = "terraform-operator"
+}
+
+<span class="text-zinc-500"># add terraform user to terraform group</span>
+resource "aws_iam_group_membership" "terraform_team" {
+  name = "terraform-membership"
+
+  users = [
+    aws_iam_user.terraform_user.name
+  ]
+
+  group = aws_iam_group.terraform_group.name
+}</code></pre>
+                    </div>
+                    <div id="tab-ec2" class="tab-content hidden">
+<pre class="text-sm text-emerald-400"><code><span class="text-zinc-500"># cria par de chaves para SSH</span>
+resource "aws_key_pair" "chave_ssh" {
+  key_name   = "chave-debian-server"
+  public_key = file(pathexpand("~/.ssh/id_ed25519.pub"))
+}
+
+<span class="text-zinc-500"># acha a imagem oficial mais recente do Debian 13 ARM</span>
+data "aws_ami" "debian" {
+  most_recent = true
+  owners      = ["136693071363"] <span class="text-zinc-500"># ID Debian AWS</span>
+
+  filter {
+    name   = "name"
+    values = ["debian-13-arm64-*"] <span class="text-zinc-500"># filtra por Debian 13 ARM</span>
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+<span class="text-zinc-500"># create EC2 instances</span>
+resource "aws_instance" "server_debian" {
+
+  ami           = data.aws_ami.debian.id <span class="text-zinc-500"># pega a AMI do debian encontrdo pelo bloco acima</span>
+  instance_type = var.instance_type      <span class="text-zinc-500"># free tier arm</span>
+
+  <span class="text-zinc-500"># adiciona na VPC criada</span>
+  subnet_id              = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  <span class="text-zinc-500"># hardening - desativa SSH com senha e root</span>
+  user_data = &lt;&lt;-EOF
+          #!/bin/bash
+          set -e
+
+          sed -i 's/^#\\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
+          sed -i 's/^#\\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+          sed -i 's/^#\\?PubkeyAuthentication .*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+
+          systemctl enable ssh
+          systemctl restart ssh || systemctl restart sshd
+          EOF
+
+  key_name = aws_key_pair.chave_ssh.key_name <span class="text-zinc-500"># atribui a chave SSH</span>
+
+  <span class="text-zinc-500"># pega ip publico</span>
+  associate_public_ip_address = true
+
+  <span class="text-zinc-500"># tag para facilitar a identificação</span>
+  tags = {
+    Name = "EC2-${var.project_name}"
+  }
+}</code></pre>
+                    </div>
+                    <div id="tab-variables" class="tab-content hidden">
+<pre class="text-sm text-emerald-400"><code>variable "aws_region" {
+  description = "AWS region for all resources"
+  type        = string
+  default     = "sa-east-1"
+}
+
+variable "instance_type" {
+  description = "EC2 instance type"
+  type        = string
+  default     = "t4g.micro"
+}
+
+variable "project_name" {
+  description = "Used for tagging and naming resources"
+  type        = string
+  default     = "debian-server"
+}</code></pre>
+                    </div>
+                    <div id="tab-outputs" class="tab-content hidden">
+<pre class="text-sm text-emerald-400"><code><span class="text-zinc-500"># Exibe o IP público da instância após a criação</span>
+output "ip_publico" {
+  description = "Endereço IP público da instância EC2"
+  value       = aws_instance.server_debian.public_ip
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabsContainer = document.getElementById('code-tabs-container');
+            if (tabsContainer) {
+                const tabButtons = tabsContainer.querySelectorAll('.tab-button');
+                const tabContents = tabsContainer.querySelectorAll('.tab-content');
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetId = button.dataset.target;
+                        
+                        // Hide all content
+                        tabContents.forEach(content => {
+                            content.classList.add('hidden');
+                        });
+
+                        // Deactivate all buttons
+                        tabButtons.forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+
+                        // Show target content
+                        const targetContent = document.getElementById(targetId);
+                        if (targetContent) {
+                            targetContent.classList.remove('hidden');
+                        }
+
+                        // Activate clicked button
+                        button.classList.add('active');
+                    });
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

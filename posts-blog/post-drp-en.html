@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Recovery from 10,000km Away | DevOps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex space-x-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li class="pl-4 ml-2 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-drp.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Post Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-03-24">Mar 24, 2026</time>
+                <span>•</span>
+                <span>6 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Disaster Recovery and Network Resilience across 10,000km
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Disaster Recovery</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Networking</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">Troubleshooting</span>
+            </div>
+        </header>
+
+        <!-- Post Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">
+                After a storm in Blumenau and a few power outages in my apartment, my server (ZimaOS / Ryzen 7 5800X) simply disappeared from Tailscale.
+            </p>
+            <p class="leading-relaxed">
+                Even with the auto-restart setting, I imagined it might not have booted correctly, whether due to hardware failure, a boot issue, or even some service not starting properly (Docker / Tailscale).
+            </p>
+            <p class="leading-relaxed">
+                I asked someone to go to the location to check. The server was on, but even after a reboot, the problem persisted: it quickly connected to Tailscale and then immediately went offline again.
+            </p>
+            <p class="leading-relaxed">
+                Since the person there lacked technical knowledge (my mom), I also asked her to turn on my main computer which is on the same LAN. I am traveling, so the idea was to use it as an entry point. With the PC on, I managed to access it via RustDesk (I leave it configured exactly for this) and investigate the problem from inside the network.
+            </p>
+            <p class="leading-relaxed">
+                The first attempt was to access the server via direct IPv4: no success. However, I managed to access it via hostname (<code>zimaos.local</code>), which already showed the system was running. Even so, I couldn't access the terminal via the web interface or via SSH using IPv4. I tried restarting the system through the dashboard, but it didn't solve it.
+            </p>
+            <p class="leading-relaxed">
+                I then decided to test pinging the hostname:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6">
+<pre class="text-sm text-emerald-400"><code>C:\Users\luisf>ping zimaos.local
+
+Pinging zimaos [fe80::739e:13e:d85e:d7ad%4] with 32 bytes of data:
+Reply from fe80::739e:13e:d85e:d7ad%4: time&lt;1ms</code></pre>
+            </div>
+            <p class="leading-relaxed">
+                It replied with a link-local IPv6 address. That's what allowed me to continue.
+            </p>
+            <p class="leading-relaxed">
+                Using this IPv6, I managed to access via SSH. Once inside the server, I ran:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6">
+<pre class="text-sm text-emerald-400"><code>lfck@ZimaOS:~ ➜ $ ip addr</code></pre>
+            </div>
+            <p class="leading-relaxed">
+                And saw the interface was like this:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>Static IPv4: 192.168.1.250</li>
+                <li>IPv6 working normally</li>
+            </ul>
+            <p class="leading-relaxed">
+                That .250 was an IP I had manually configured before.
+            </p>
+            <p class="leading-relaxed">
+                To ensure it wasn't something more superficial, I tested the filesystem (touch), stopped services like Docker, but nothing changed.
+            </p>
+            <p class="leading-relaxed">
+                I then decided to revert the interface to DHCP:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6 mb-6">
+<pre class="text-sm text-emerald-400"><code>lfck@ZimaOS:~ ➜ $ sudo dhclient -v eth1
+...
+DHCPOFFER of 192.168.1.7 from 192.168.1.1
+...
+bound to 192.168.1.7</code></pre>
+            </div>
+            <p class="leading-relaxed">It grabbed the IP 192.168.1.7, but even so:</p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>couldn't access via this IP</li>
+                <li>had no external ping response</li>
+                <li>it seemed there was no outbound routing</li>
+            </ul>
+            <p class="leading-relaxed">
+                I tried forcing the gateway:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6">
+<pre class="text-sm text-emerald-400"><code>lfck@ZimaOS:~ ➜ $ sudo ip route replace default via 192.168.1.1 dev eth1
+lfck@ZimaOS:~ ➜ $ ping -c 4 8.8.8.8</code></pre>
+            </div>
+            
+            <p class="leading-relaxed mt-4">No response.</p>
+            <p class="leading-relaxed">That's when I ran:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6">
+<pre class="text-sm text-emerald-400"><code>lfck@ZimaOS:~ ➜ $ ip route show</code></pre>
+            </div>
+            <p class="leading-relaxed mt-4">And saw something strange:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6 mb-6">
+<pre class="text-sm text-emerald-400"><code>192.168.1.0/24 dev eth1 ... src 192.168.1.7
+192.168.1.0/24 dev eth1 ... src 192.168.1.250 metric 100</code></pre>
+            </div>
+            <p class="leading-relaxed">
+                That is, two routes for the same network, with two different IPs on the same interface.
+            </p>
+            <p class="leading-relaxed">
+                I manually removed the old IP and restarted the main services:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6 mb-6">
+<pre class="text-sm text-emerald-400"><code>sudo ip addr del 192.168.1.250/24 dev eth1
+sudo systemctl restart zimaos-gateway.service
+sudo systemctl restart zimaos.service
+sudo iptables -F
+sudo iptables -t nat -F</code></pre>
+            </div>
+            <p class="leading-relaxed">
+                Even then, I still had no external connectivity.
+            </p>
+            <p class="leading-relaxed">
+                At this point, I began to suspect the problem wasn't just on the server. I ran a network scan:
+            </p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-6 mb-6">
+<pre class="text-sm text-emerald-400"><code>luisf@LFckdsk:~$ sudo nmap -sn 192.168.1.0/24
+
+Nmap scan report for 192.168.1.200
+Host is up (0.00040s latency).
+Nmap done: 256 IP addresses (1 host up)</code></pre>
+            </div>
+            <p class="leading-relaxed">
+                Only my own machine appeared.
+            </p>
+            <p class="leading-relaxed">
+                Other devices on the network (like an IP camera) were working normally, but weren't detected in the scan. Not even the router itself appeared.
+            </p>
+            <p class="leading-relaxed">
+                This indicated that the local IPv4 network was inconsistent — probably something in the router after the power outage (ARP/cache or stuck internal state).
+            </p>
+            <p class="leading-relaxed">
+                The ideal here would be to reboot the router, but I had no one else on-site to do that.
+            </p>
+            <p class="leading-relaxed">
+                As an alternative, I configured access via Zima Remote (HTTPS tunnel) to maintain control of the server even with unstable Tailscale, and also to use the SnapUp service and ‘wake up’ my workstation to use it as an alternative access point and exit node when necessary.
+            </p>
+            <p class="leading-relaxed">
+                After that, without a clear change that I can assert with certainty, the network started to return to normal:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>Tailscale stabilized</li>
+                <li>ping started responding again</li>
+                <li>I ran Nmap again and all devices reappeared</li>
+            </ul>
+            <p class="leading-relaxed">
+                In other words, the network "unlocked" — possibly because the router finally recovered or updated its internal state. It's impossible to state exactly what the trigger was.
+            </p>
+            <p class="leading-relaxed">
+                The most likely hypothesis is that it all started with:
+            </p>
+            <ul class="list-disc list-inside space-y-2 mb-6 ml-4">
+                <li>conflict between the static IP (.250) and DHCP</li>
+                <li>coupled with an inconsistent router state after the power outage</li>
+            </ul>
+            <p class="leading-relaxed">
+                This ended up breaking local IPv4 connectivity for a while.
+            </p>
+            <p class="leading-relaxed mb-8">
+                After everything normalized, I re-established access via Tailscale (including subnet and exit node) and had no further issues.
+            </p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 Lessons</h3>
+                <ul class="list-disc list-inside space-y-3 text-sm text-zinc-300">
+                    <li>IPv6 saved access when IPv4 failed</li>
+                    <li>having a second entry point on the LAN (RustDesk) was essential</li>
+                    <li>in a home network, DHCP with reservation is usually more reliable than a static IP on the host</li>
+                    <li>ISP router can become the most fragile point of the infrastructure</li>
+                    <li>not every incident has a 100% provable cause, and that's fine — the important thing is to isolate coherent hypotheses and restore the service</li>
+                </ul>
+            </div>
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>

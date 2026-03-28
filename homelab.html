@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homelab | DevOps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar for Webkit-based browsers (Chrome, Safari) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(113, 113, 122, 0.4); /* zinc-500/40 */
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(16, 185, 129, 0.6); /* emerald-500/60 */
+        }
+        /* Custom Scrollbar for Firefox */
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(113, 113, 122, 0.4) transparent; /* thumb track */
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex space-x-6 text-sm text-zinc-500">
+                <li><a href="index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="homelab.html" class="text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="blog.html" class="hover:text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-4 ml-2 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="homelab-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="container mx-auto px-6 py-16 max-w-4xl">
+
+        <div class="mb-12 border-b border-zinc-800/50 pb-8">
+            <h1 class="text-3xl font-bold text-zinc-200 mb-4 tracking-tight">
+                > ./<span class="text-emerald-500">network_map.sh</span><span class="animate-blink">_</span>
+            </h1>
+                <p class="text-zinc-500">Overview da minha infraestrutura física e lógica self-hosted.</p>
+            </div>
+
+        <!-- Diagrama da Topologia (ASCII) -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> physical_topology
+            </h2>
+            <div class="p-6 bg-zinc-900/30 border border-zinc-800 rounded overflow-x-auto">
+<pre class="font-mono text-sm md:text-base text-zinc-400 leading-relaxed">
+🌐 <span class="text-blue-400 font-bold">WAN</span> (Internet)
+└── 🖧 <span class="text-zinc-200">ISP Modem</span> <span class="text-xs text-zinc-500">[Bridge Mode]</span>
+    └── 🛡️ <span class="text-emerald-400 font-bold">OPNsense Firewall</span> <span class="text-xs text-zinc-500">[MiniPC N150]</span>
+        └── 🔀 <span class="text-zinc-200">Switch 2.5GbE</span>
+            ├── 🖥️ <span class="text-blue-400 font-bold">Server Node</span> <span class="text-xs text-zinc-500">[Intel i5-1345u]</span>
+            │    └── 🐳 <span class="text-zinc-500">Docker Services</span>
+            ├── 💻 <span class="text-zinc-200">Workstation PC</span> <span class="text-xs text-zinc-500">[Ryzen 9 5900xt]</span>
+            └── 📶 <span class="text-zinc-200">Omada WiFi 6</span> <span class="text-xs text-zinc-500">[Access Point]</span>
+</pre>
+            </div>
+        </section>
+
+        <!-- VLANs -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> vlan_segmentation
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- VLAN Oficial -->
+                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-emerald-500">
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-emerald-500">Oficial</span></div>
+                    <p class="text-xs text-zinc-500">Dispositivos confiáveis, workstation e servidores principais.</p>
+                </div>
+                <!-- VLAN IoT -->
+                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-blue-500">
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-blue-500">IoT</span></div>
+                    <p class="text-xs text-zinc-500">Smart devices, TVs e dispositivos isolados sem acesso à rede local.</p>
+                </div>
+                <!-- VLAN Labs -->
+                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-amber-500">
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-amber-500">Laboratórios</span></div>
+                    <p class="text-xs text-zinc-500">Ambiente de testes para malware analysis e quebra de serviços.</p>
+                </div>
+                <!-- VLAN Guest -->
+                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-purple-500">
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-purple-500">Guest</span></div>
+                    <p class="text-xs text-zinc-500">Rede para visitantes com isolamento total da rede interna e acesso apenas à internet.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Docker Services -->
+        <section>
+            <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">></span> docker ps -a
+            </h2>
+            <div class="border border-zinc-800 bg-zinc-900/30 rounded overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-zinc-800 text-zinc-500 bg-zinc-900/50">
+                            <th class="p-4 font-normal">CONTAINER_NAME</th>
+                            <th class="p-4 font-normal">STATE</th>
+                            <th class="p-4 font-normal">CATEGORY</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-300">
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">wazuh-manager</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Security / SIEM</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">omada-controller</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Network Mgmt</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">portainer</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Infrastructure UI</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">immich</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Photo Backup</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">motioneye</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">NVR / CCTV</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">jellyfin</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Media Server</td>
+                        </tr>
+                        <tr class="hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">upsnap</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Wake-on-LAN</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Diagrama Completo -->
+        <section class="mt-12">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-zinc-200 flex items-center gap-2">
+                    <span class="text-emerald-500">#</span> full_network_diagram
+                </h2>
+                <button id="toggle-view-button" class="text-xs text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
+                    {...} Ver Código
+                </button>
+            </div>
+            <div class="relative">
+                <div id="zoom-controls" class="absolute top-3 right-5 flex items-center gap-1 z-20">
+                    <button id="zoom-out" class="px-2 text-lg font-bold text-zinc-500 hover:text-emerald-400 transition-colors leading-none">-</button>
+                    <button id="zoom-in" class="px-2 text-lg font-bold text-zinc-500 hover:text-emerald-400 transition-colors leading-none">+</button>
+                </div>
+                <button id="copy-d2-code" class="hidden absolute top-3 right-5 text-xs bg-zinc-700 hover:bg-emerald-600 text-zinc-300 px-2 py-1 rounded transition-colors z-20">Copiar</button>
+                <div class="bg-zinc-900/30 border border-zinc-800 rounded overflow-auto cursor-grab max-h-[85vh] custom-scrollbar">
+                    <div class="p-6">
+                        <pre id="detailed-topology-content" class="font-mono text-[4px] md:text-[5px] text-zinc-400 leading-[1.1]">Carregando diagrama completo...</pre>
+                        <pre id="d2-code-content" class="hidden p-0 m-0 font-mono text-xs text-zinc-400">Carregando código D2...</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // Carregar diagrama ASCII
+            const topologyElement = document.getElementById('detailed-topology-content');
+            fetch('images/topology.txt')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.text();
+                })
+                .then(data => {
+                    topologyElement.textContent = data;
+                })
+                .catch(error => {
+                    topologyElement.textContent = 'Erro ao carregar o diagrama. Verifique se o arquivo "images/topology.txt" existe.';
+                    console.error('Falha ao carregar a topologia:', error);
+                });
+
+            // Lógica para o código D2
+            const toggleButton = document.getElementById('toggle-view-button');
+            const d2CodeElement = document.getElementById('d2-code-content');
+            const copyButton = document.getElementById('copy-d2-code');
+            const zoomControls = document.getElementById('zoom-controls');
+            const diagramBox = topologyElement.parentElement.parentElement;
+
+            fetch('images/diagram-as-code.d2')
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(data => { d2CodeElement.textContent = data; })
+                .catch(error => { d2CodeElement.textContent = 'Erro ao carregar o código D2.'; });
+
+            if (toggleButton) {
+                toggleButton.addEventListener('click', () => {
+                    const isDiagramVisible = !topologyElement.classList.contains('hidden');
+                    topologyElement.classList.toggle('hidden');
+                    d2CodeElement.classList.toggle('hidden');
+                    copyButton.classList.toggle('hidden');
+                    zoomControls.classList.toggle('hidden');
+
+                    if (isDiagramVisible) {
+                        toggleButton.textContent = '{...} Ver Diagrama';
+                        diagramBox.classList.remove('cursor-grab', 'cursor-grabbing');
+                    } else {
+                        toggleButton.textContent = '{...} Ver Código';
+                        diagramBox.classList.add('cursor-grab');
+                    }
+                });
+            }
+
+            if (copyButton) {
+                copyButton.addEventListener('click', () => {
+                    navigator.clipboard.writeText(d2CodeElement.textContent).then(() => {
+                        copyButton.textContent = 'Copiado!';
+                        setTimeout(() => { copyButton.textContent = 'Copiar'; }, 2000);
+                    });
+                });
+            }
+
+            // Lógica de Zoom
+            const zoomInButton = document.getElementById('zoom-in');
+            const zoomOutButton = document.getElementById('zoom-out');
+            const minFontSize = 2;
+            const maxFontSize = 16;
+            const step = 1;
+
+            const getFontSize = (element) => {
+                if (element.style.fontSize) {
+                    return parseFloat(element.style.fontSize);
+                }
+                return parseFloat(window.getComputedStyle(element).fontSize);
+            };
+
+            if (zoomInButton && zoomOutButton && topologyElement) {
+                zoomInButton.addEventListener('click', () => {
+                    let currentSize = getFontSize(topologyElement);
+                    if (currentSize < maxFontSize) {
+                        topologyElement.style.fontSize = `${currentSize + step}px`;
+                    }
+                });
+
+                zoomOutButton.addEventListener('click', () => {
+                    let currentSize = getFontSize(topologyElement);
+                    if (currentSize > minFontSize) {
+                        topologyElement.style.fontSize = `${currentSize - step}px`;
+                    }
+                });
+            }
+
+            // Lógica de arrastar para rolar
+            if (diagramBox) {
+                let isDown = false;
+                let startX, startY, scrollLeft, scrollTop;
+
+                diagramBox.addEventListener('mousedown', (e) => {
+                    if (topologyElement.classList.contains('hidden')) return;
+                    isDown = true;
+                    diagramBox.classList.replace('cursor-grab', 'cursor-grabbing');
+                    diagramBox.classList.add('select-none');
+                    startX = e.pageX - diagramBox.offsetLeft;
+                    startY = e.pageY - diagramBox.offsetTop;
+                    scrollLeft = diagramBox.scrollLeft;
+                    scrollTop = diagramBox.scrollTop;
+                });
+
+                const stopDragging = () => {
+                    if (!isDown) return;
+                    isDown = false;
+                    diagramBox.classList.replace('cursor-grabbing', 'cursor-grab');
+                    diagramBox.classList.remove('select-none');
+                };
+
+                diagramBox.addEventListener('mouseleave', stopDragging);
+                diagramBox.addEventListener('mouseup', stopDragging);
+
+                diagramBox.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - diagramBox.offsetLeft;
+                    const y = e.pageY - diagramBox.offsetTop;
+                    const walkX = (x - startX);
+                    const walkY = (y - startY);
+                    diagramBox.scrollLeft = scrollLeft - walkX;
+                    diagramBox.scrollTop = scrollTop - walkY;
+                });
+            }
+        });
+    </script>
+</body>
+</html>

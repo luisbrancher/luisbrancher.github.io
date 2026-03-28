@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV | DevOps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex space-x-6 text-sm text-zinc-500">
+                <li><a href="index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="cv-en.html" class="text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="blog-en.html" class="hover:text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-4 ml-2 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="cv.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="container mx-auto px-6 py-16 max-w-4xl">
+        
+        <!-- Header -->
+        <div class="mb-12 border-b border-zinc-800/50 pb-8">
+            <h1 class="text-3xl font-bold text-zinc-200 mb-4 tracking-tight">
+                > cat <span class="text-emerald-500">resume.txt</span><span class="animate-blink">_</span>
+            </h1>
+            <h2 class="text-xl text-zinc-300 mb-1">Luis Felipe Brancher Fuck</h2>
+            <p class="text-zinc-500 mb-4">Entry-Level DevOps Engineer | Cloud &amp; Infrastructure</p>
+            <div class="flex flex-col gap-4 text-sm">
+                <span class="flex items-center gap-2 text-zinc-400"><span class="text-zinc-600">📍</span> Blumenau - SC - Brazil</span>
+                <div class="flex flex-wrap gap-4">
+                    <a href="mailto:luisbrancher@proton.me" class="flex items-center gap-2 hover:text-emerald-400 transition-colors"><span class="text-zinc-600">✉</span> luisbrancher@proton.me</a>
+                    <a href="https://www.linkedin.com/in/luisbrancher/" target="_blank" class="flex items-center gap-2 hover:text-emerald-400 transition-colors"><span class="text-zinc-600">🔗</span> linkedin.com/in/luisbrancher</a>
+                    <a href="https://github.com/luisbrancher" target="_blank" class="flex items-center gap-2 hover:text-emerald-400 transition-colors"><span class="text-zinc-600">💻</span> github.com/luisbrancher</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> whoami
+            </h2>
+            <p class="text-sm text-zinc-400 leading-relaxed bg-zinc-900/30 p-5 border border-zinc-800 rounded">
+                I started with a homelab out of curiosity and dived deep into cybersecurity to understand what I was doing. That's exactly where I fell in love with infrastructure itself. Today I treat it as code: Terraform on AWS, VPC, least-privilege IAM, remote backend. The security foundation remained as a layer, not the focus, making me think about protection before spinning up any resource. I bring over 10 years operating under pressure in the audiovisual sector. Documentation, troubleshooting, and delivery are things I've been doing for years, just in a different context. I am looking for a position where I can grow in cloud, DevOps, and automation with real-world work.
+            </p>
+        </section>
+
+        <!-- Skills -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Tech_Stack
+            </h2>
+            <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Linux</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Python</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Bash</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Docker</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Terraform</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">AWS</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Ansible</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Git</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">SSH</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Networking</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Firewall</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Monitoring</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Security</span>
+                <span class="px-3 py-1 bg-zinc-900 border border-zinc-800 rounded text-sm text-emerald-400">Documentation</span>
+            </div>
+        </section>
+
+        <!-- Experience -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-6 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Work_Experience
+            </h2>
+            
+            <div class="space-y-8 pl-4 border-l border-zinc-800/50">
+                <div class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                    <h3 class="text-lg font-bold text-zinc-200">Motion Designer / Video Editor <span class="text-emerald-500">@ Audiovisual Sector</span></h3>
+                    <p class="text-xs text-zinc-500 mb-3">2010 - Present</p>
+                    <ul class="list-disc list-inside text-sm text-zinc-400 space-y-2">
+                        <li>Over 10 years of experience focusing on technical workflow organization and attention to detail.</li>
+                        <li>Operation of complex systems and software under pressure, ensuring technical project delivery.</li>
+                        <li>Team leadership and communication facilitation across different departments.</li>
+                        <li>Management of technical projects with tight deadlines and multiple stakeholders.</li>
+                        <li>Documentation of technical processes and workflows.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Education -->
+        <section class="mb-12">
+            <h2 class="text-xl font-semibold text-zinc-200 mb-6 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Education
+            </h2>
+            
+            <div class="space-y-6 pl-4 border-l border-zinc-800/50">
+                <div class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <h3 class="text-lg font-bold text-zinc-200">Completed Cybersecurity Disciplines</h3>
+                    <p class="text-sm text-zinc-400 mb-2">PUC-PR (Pontifícia Universidade Católica do Paraná)</p>
+                    <p class="text-xs text-zinc-500">Official certificate for completed disciplines issued by the institution.</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <span class="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 rounded text-xs text-zinc-400">Linux</span>
+                        <span class="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 rounded text-xs text-zinc-400">Networking</span>
+                        <span class="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 rounded text-xs text-zinc-400">Python</span>
+                        <span class="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 rounded text-xs text-zinc-400">Ethical Hacking</span>
+                        <span class="px-2 py-0.5 bg-zinc-800/50 border border-zinc-700/50 rounded text-xs text-zinc-400">Cybersecurity Operations</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Certifications -->
+        <section>
+            <h2 class="text-xl font-semibold text-zinc-200 mb-6 flex items-center gap-2">
+                <span class="text-emerald-500">#</span> Certifications
+            </h2>
+            <ul class="list-none text-sm text-zinc-400 space-y-5 pl-4 border-l border-zinc-800/50">
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">ISC2</span> CC Certified in Cybersecurity
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Sep 2025 | ID: e237a28d-3cb1-4f33-8785-f13296409d11</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">Fortinet</span> Certified Associate in Cybersecurity
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Aug 2025 | ID: 4860626429LF</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">Fortinet</span> Certified Fundamentals in Cybersecurity
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Aug 2025 | ID: 2243338952LF</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">TryHackMe</span> Cyber Security 101 Certificate
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Jun 2025 | ID: THM-PCBMCJBRQV</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">Google</span> Cybersecurity Certificate
+                    <span class="block text-xs text-zinc-600 mt-1">↳ May 2025 | ID: UM7P9L9C3MOJ</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">TryHackMe</span> Pre Security Certificate
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Apr 2025 | ID: THM-HNX6LWNXCU</span>
+                </li>
+                <li class="relative">
+                    <div class="absolute -left-[21px] top-1.5 w-2 h-2 bg-zinc-700 rounded-full"></div>
+                    <span class="text-emerald-400 font-bold">Era Conectada</span> Web Front-End Developer
+                    <span class="block text-xs text-zinc-600 mt-1">↳ Jun 2021</span>
+                </li>
+            </ul>
+        </section>
+    </main>
+</body>
+</html>
