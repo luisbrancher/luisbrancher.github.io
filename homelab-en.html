@@ -217,7 +217,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             // Load ASCII diagram
             const topologyElement = document.getElementById('detailed-topology-content');
-            fetch('images/topology.txt')
+            fetch('assets/topology.txt')
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response.text();
@@ -226,7 +226,7 @@
                     topologyElement.textContent = data;
                 })
                 .catch(error => {
-                    topologyElement.textContent = 'Error loading diagram. Check if "images/topology.txt" exists.';
+                    topologyElement.textContent = 'Error loading diagram. Check if "assets/topology.txt" exists.';
                     console.error('Failed to load topology:', error);
                 });
 
@@ -237,7 +237,7 @@
             const zoomControls = document.getElementById('zoom-controls');
             const diagramBox = topologyElement.parentElement.parentElement;
 
-            fetch('images/diagram-as-code.d2')
+            fetch('assets/diagram-as-code.d2')
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok');
                     return response.text();
