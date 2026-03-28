@@ -73,7 +73,10 @@
         <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
             
             <p class="leading-relaxed">
-                Após uma tempestade em Blumenau e algumas quedas de energia no meu apartamento, meu servidor (ZimaOS / Ryzen 7 5800X) simplesmente desapareceu do Tailscale.
+                Estou viajando por 3 meses por diferentes países. Antes de sair, configurei meu servidor em casa como uma espécie de embaixada digital: acesso remoto aos meus serviços, exit node no Brasil via Tailscale para quando precisar de um IP brasileiro, e RustDesk na workstation como ponto de entrada alternativo na LAN. A ideia era ter autonomia total mesmo a 10.000km de distância.
+            </p>
+            <p class="leading-relaxed">
+                Até que uma tempestade em Blumenau derrubou a energia no meu apartamento e meu servidor (ZimaOS / Ryzen 7 5800X) simplesmente desapareceu do Tailscale.
             </p>
             <p class="leading-relaxed">
                 Mesmo com a configuração de religar automaticamente, imaginei que ele poderia não ter subido corretamente, seja por falha de hardware, problema no boot ou até algum serviço não iniciando direito (Docker / Tailscale).
@@ -82,7 +85,7 @@
                 Pedi para alguém ir até o local verificar. O servidor estava ligado, mas mesmo após reiniciar, o problema continuava: ele conectava rapidamente ao Tailscale e logo ficava offline de novo.
             </p>
             <p class="leading-relaxed">
-                Como quem estava lá não tinha conhecimento técnico (minha mãe ), pedi também para ligarem meu computador principal que está na mesma LAN. Eu estou viajando, então a ideia era usar ele como ponto de entrada. Com o PC ligado, consegui acessar via RustDesk (já deixo configurado justamente pra isso) e investigar o problema de dentro da rede.
+                Como quem estava lá não tinha conhecimento técnico (minha mãe), pedi também para ligarem meu computador principal que está na mesma LAN. Eu estou viajando, então a ideia era usar ele como ponto de entrada. Com o PC ligado, consegui acessar via RustDesk (já deixo configurado justamente pra isso) e investigar o problema de dentro da rede.
             </p>
             <p class="leading-relaxed">
                 A primeira tentativa foi acessar o servidor via IPv4 direto: sem sucesso. Porém consegui acessar via hostname (<code>zimaos.local</code>), o que já mostrava que o sistema estava rodando. Mesmo assim, não conseguia acessar o terminal via interface web nem via SSH usando IPv4. Tentei reiniciar o sistema pelo dashboard, mas não resolveu.
