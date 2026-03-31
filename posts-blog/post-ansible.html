@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurando a EC2 com Ansible | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-ansible-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-03-31">31 Mar 2026</time>
+                <span>•</span>
+                <span>7 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Do servidor provisionado ao site no ar: configurando a EC2 com Ansible
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">AWS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">NGINX</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TAILSCALE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">DEVOPS</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/personal-site-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> Acessar repositório no GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">No post anterior, terminei com uma EC2 rodando Debian na AWS: VPC própria, IAM com privilégio mínimo, hardening no boot. O servidor existia, mas era uma máquina vazia. Faltava o que realmente importa: configurar tudo que vai rodar dentro dela. É aí que entra o Ansible.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O que é Ansible e por que ele existe aqui</h2>
+            <p class="leading-relaxed">Terraform fala com APIs — cria recursos na AWS, no Cloudflare, onde for. Ansible fala com sistemas operacionais via SSH. Quando o <code>terraform apply</code> termina, você tem uma máquina. O Ansible é o que transforma essa máquina em servidor. O Ansible não precisa de agente instalado no servidor. Ele conecta via SSH, executa o que precisa, e sai. Tudo roda a partir da máquina local.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Ajustes no Terraform antes de começar</h2>
+            <p class="leading-relaxed">Antes de escrever uma linha de Ansible, percebi que o Terraform precisava de alguns ajustes, pois comprei meu domínio no Cloudflare e resolvi fazer o DNS por lá.</p>
+            <p class="leading-relaxed">O primeiro: a porta 80. Eu tinha configurado o security group só com 443, pensando em HTTPS. Mas com o Cloudflare como proxy, o fluxo é diferente: o Cloudflare termina o HTTPS e repassa a requisição para a origem em HTTP. O visitante sempre vê HTTPS, mas a comunicação Cloudflare → EC2 é na porta 80. Sem ela aberta, o site simplesmente não carrega.</p>
+            <p class="leading-relaxed">O segundo: o DNS. Eu comprei o domínio <code>luisbrancher.dev</code> e precisava que o Cloudflare apontasse pro IP da EC2. Em vez de fazer isso manualmente no dashboard, adicionei o provider do Cloudflare diretamente no Terraform. O resultado ficou assim:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>resource "cloudflare_record" "site" {
+  zone_id = "..."
+  name    = "@"
+  content = aws_instance.server_debian.public_ip
+  type    = "A"
+  proxied = true
+  ttl     = 1
+}</code></pre>
+            </div>
+
+            <p class="leading-relaxed mt-4">O <code>content</code> referencia diretamente o IP da EC2 como atributo do recurso. O Terraform já sabe a ordem: cria a EC2, pega o IP, cria o registro DNS. Sem workaround, sem buscar o IP manualmente.</p>
+            <p class="leading-relaxed">O token da Cloudflare ficou como variável de ambiente no HCP Terraform — mesmo padrão das credenciais da AWS. Zero segredo no código.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> A estrutura do Ansible</h2>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>ansible/
+├── inventory.ini
+├── group_vars/
+│   ├── all.yml
+│   └── vault.yml
+├── templates/
+│   └── nginx.conf.j2
+└── site.yml</code></pre>
+            </div>
+            <p class="leading-relaxed mt-4">O <code>inventory.ini</code> é o mapa das máquinas — define onde o Ansible vai conectar e com qual chave SSH. O <code>group_vars/all.yml</code> centraliza as variáveis: domínio, caminhos, referências aos secrets. O <code>vault.yml</code> guarda a Tailscale auth key criptografada.</p>
+            <p class="leading-relaxed">Sobre o Ansible Vault: em vez de exportar variáveis de ambiente ou deixar tokens expostos, o Vault criptografa o arquivo com uma senha master. Você commita o arquivo criptografado sem problema. Na hora de rodar, passa a senha:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>ansible-playbook site.yml -i inventory.ini --ask-vault-pass</code></pre>
+            </div>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O playbook</h2>
+            <p class="leading-relaxed">O playbook tem três blocos principais.</p>
+            <p class="leading-relaxed"><strong>nginx</strong> — instala, cria o diretório do site, aplica a configuração via template Jinja2 e garante que o serviço está rodando. A configuração do nginx usa um arquivo <code>.j2</code> onde as variáveis como domínio e caminho são substituídas na hora de copiar pro servidor. Assim o mesmo template funciona pra qualquer domínio.</p>
+            <p class="leading-relaxed">Uma coisa que aprendi aqui: <em>handlers</em>. Em vez de reiniciar o nginx toda vez que uma task termina, o <code>notify</code> acumula as notificações e dispara o restart uma única vez no final.</p>
+            <p class="leading-relaxed"><strong>git</strong> — em vez de copiar arquivos manualmente, o Ansible clona direto o repositório <code>luisbrancher.github.io</code> na pasta servida pelo nginx. Quando o conteúdo do site mudar, é só rodar o playbook de novo — ou futuramente automatizar via GitHub Actions.</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>- name: Clonar o repositório do site
+  ansible.builtin.git:
+    repo: "https://github.com/luisbrancher/luisbrancher.github.io.git"
+    dest: "{{ site_root }}"
+    version: main
+    force: true</code></pre>
+            </div>
+
+            <p class="leading-relaxed mt-4"><strong>Tailscale</strong> — instala via script oficial e conecta a instância à minha tailnet com a auth key. Depois disso, a EC2 passa a ter um hostname privado dentro da minha rede Tailscale — <code>algo.tail1234.ts.net</code>. A ideia é que numa próxima etapa, a porta 22 seja fechada no security group e todo o acesso SSH passe a acontecer só por dentro da tailnet.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Idempotência — um conceito importante</h2>
+            <p class="leading-relaxed">Dá pra rodar esse playbook dez vezes seguidas. Na primeira, instala tudo. Da segunda em diante, verifica o estado atual e não faz nada se já estiver correto.</p>
+            <p class="leading-relaxed">Isso é idempotência. É diferente de um script bash onde <code>apt-get install nginx</code> simplesmente roda de novo toda vez. O módulo <code>apt</code> com <code>state: present</code> verifica primeiro: já está instalado? Então pula.</p>
+            <p class="leading-relaxed">É essa diferença que torna Ansible adequado pra automação de verdade — e que vai permitir usar esse mesmo playbook como plano de recuperação se um dia precisar recriar tudo do zero.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O estado atual da infraestrutura</h2>
+            <p class="leading-relaxed">Com o Terraform e o Ansible trabalhando juntos, o fluxo ficou assim:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4">
+<pre class="text-sm text-emerald-400"><code>terraform apply
+  → EC2 criada, DNS apontado, IP disponível no output
+
+ansible-playbook
+  → nginx instalado e configurado
+  → site clonado do GitHub
+  → Tailscale conectado
+
+próximos passos:
+  → confirmar acesso via Tailscale
+  → fechar porta 22
+  → GitHub Actions para deploy automático no push</code></pre>
+            </div>
+            <p class="leading-relaxed mt-4">O repositório com todo o código está em <a href="https://github.com/luisbrancher/personal-site-infra" target="_blank" class="text-emerald-400 hover:underline">github.com/luisbrancher/personal-site-infra</a>.</p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 Lições</h3>
+                <ul class="list-disc list-inside space-y-3 text-sm text-zinc-300">
+                    <li>Ansible e Terraform não competem — cada um tem seu domínio claro. Aprender onde termina um e começa o outro foi metade do aprendizado.</li>
+                    <li>DNS pertence ao Terraform, não ao Ansible. O IP da EC2 já é um atributo nativo do recurso — referenciar diretamente é mais limpo do que qualquer workaround.</li>
+                    <li>Secrets têm ferramentas diferentes dependendo de quem os consome. HCP Terraform pro que o Terraform usa. Ansible Vault pro que o Ansible usa.</li>
+                    <li>Idempotência não é um detalhe de implementação — é o princípio que torna automação confiável.</li>
+                </ul>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
