@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reformulando meu homelab #01: planejamento, hardware e Terraform | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-novo-homelab-01-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-04-04">04 Abr 2026</time>
+                <span>•</span>
+                <span>6 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Reformulando meu homelab #01: planejamento, hardware e Terraform
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TERRAFORM</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">PROXMOX</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">IAC</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">DEVOPS</span>
+            </div>
+            <div class="mt-6">
+                <a href="#" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> Acessar repositório no GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">Tô viajando faz alguns meses e enquanto isso meu homelab em casa tá rodando e me atendendo como servidor de arquivos NAS, exit node brasileiro e alguns outros serviços, como UpSnap para ligar minha workstation em casa quando necessário, mas depois de uma leve dor de cabeça com queda de energia (<a href="post-drp.html" class="text-emerald-400 hover:underline">descrita nesse artigo</a>) já considero ele aposentado. Um Ryzen 5800X com ZimaOS, tudo em Docker Compose, sem nenhuma organização séria. Funciona, mas tá longe do que eu quero.</p>
+            
+            <p class="leading-relaxed">Quando voltar pro Brasil, vou refazer tudo do zero. E já que tenho tempo aqui na viagem, resolvi planejar direitinho antes de encostar a mão no hardware. Escrever o código, pensar na arquitetura, deixar tudo pronto pra só chegar em casa e executar.</p>
+            
+            <p class="leading-relaxed">Esse artigo é o começo dessa série. Vou falar sobre o hardware novo, a arquitetura que escolhi e como tô usando Terraform pra provisionar tudo de forma profissional.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O hardware novo</h2>
+            <p class="leading-relaxed">A principal motivação da troca foi eficiência energética. Hoje uso um 5800X que sobrou por aqui de uma atualização de workstation, é um processador excelente mas consume bastante energia pra ficar ligado 24/7 como servidor. A nova stack é bem mais enxuta:</p>
+            
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><strong class="text-zinc-200">i5 1345U</strong> (Chatreey TK-13F): servidor principal, 16GB DDR4 SO-DIMM com slot pra expandir pra 32GB depois</li>
+                <li><strong class="text-zinc-200">N150</strong> (4 NICs): roteador dedicado rodando OPNsense bare metal</li>
+                <li><strong class="text-zinc-200">Raspberry Pi 4</strong>: serviços auxiliares de rede e câmeras</li>
+            </ul>
+
+            <p class="leading-relaxed">O i5 1345U é um mini PC com consumo bem menor que um desktop, mas processador de 13ª geração com 12 cores. Mais do que suficiente pra rodar Proxmox com algumas VMs.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> A arquitetura</h2>
+            <p class="leading-relaxed">Ao invés de instalar tudo direto no OS como fazia antes, dessa vez vou usar Proxmox como hypervisor e dividir as responsabilidades em VMs separadas:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>Proxmox (i5 1345U)
+├── VM: k3s-node        → todos os serviços principais
+├── VM: storage-server  → NFS e backups
+└── LXC: lxc-monitoring → Prometheus + Grafana + Loki
+
+N150
+└── OPNsense bare metal → roteador, firewall, VLANs
+
+Pi4
+├── Omada Controller    → gerenciamento dos APs
+└── MotionEye           → câmeras</code></pre>
+            </div>
+
+            <p class="leading-relaxed">O ponto central é o <strong class="text-zinc-200">k3s</strong> rodando na VM principal. k3s é uma distribuição leve do Kubernetes que substitui o Docker Compose com um modelo declarativo. Você descreve o estado desejado dos seus serviços via manifests YAML e ele garante continuamente que tudo tá rodando. Se um container travar, ele reinicia automaticamente. Quer atualizar uma imagem? Muda o manifest, faz git push, e o ArgoCD aplica no cluster sozinho.</p>
+            
+            <p class="leading-relaxed">A <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">storage-server</code> não roda nenhum serviço de aplicação. Ela só exporta volumes via NFS que o k3s-node monta pra persistir os dados do Jellyfin, Immich e afins. Disco dedicado de 100GB separado do OS.</p>
+            
+            <p class="leading-relaxed">O LXC de monitoramento roda fora do k3s intencionalmente. Se a VM principal reiniciar, o Prometheus e o Grafana continuam de pé e você consegue ver exatamente o que aconteceu.</p>
+            
+            <p class="leading-relaxed">O Pi4 ficou com os serviços que não fazem sentido dentro do Proxmox: Omada Controller pra gerenciar os APs TP-Link e MotionEye pra câmeras. Serviços que precisam estar disponíveis independente do estado do servidor principal.</p>
+            
+            <p class="leading-relaxed">E o Tailscale vai em todas as máquinas via Ansible, acesso remoto seguro a tudo sem expor nada pra internet.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O stack completo de IaC</h2>
+            <p class="leading-relaxed">O que mudou em relação ao meu setup anterior é que dessa vez quero tratar o homelab como infraestrutura de verdade. Cada peça tem uma ferramenta responsável:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>Terraform   → cria as VMs no Proxmox
+     ↓
+Ansible     → configura o OS de cada VM
+     ↓
+k3s         → orquestra os containers
+     ↓
+ArgoCD      → GitOps, deploy via git push</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Nada de SSH manual, nada de "deixa eu lembrar o que instalei nessa máquina". Se o hardware morrer amanhã, instalo o Proxmox no substituto e rodo três comandos.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O Terraform</h2>
+            <p class="leading-relaxed">Comecei pelo Terraform porque é a primeira camada. Sem as VMs criadas, o Ansible não tem onde rodar.</p>
+            
+            <p class="leading-relaxed">O provider que usei foi o <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">telmate/proxmox</code>, que é o mais maduro pra essa finalidade. A estrutura do projeto ficou assim:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>homelab-infra/
+└── terraform/
+    ├── main.tf             → terraform block + provider proxmox
+    ├── variables.tf        → todas as variáveis centralizadas
+    ├── outputs.tf          → IPs das VMs após o apply
+    └── vms/
+        ├── k3s-node.tf
+        ├── storage-server.tf
+        └── monitoring.tf</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Arquivo por VM. Quando precisar ajustar só a RAM do k3s-node, vou direto no <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">k3s-node.tf</code> sem navegar um <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">main.tf</code> gigante.</p>
+            
+            <p class="leading-relaxed">A VM principal do k3s ficou assim:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>resource "proxmox_vm_qemu" "k3s_node" {
+  name        = var.k3s_server
+  target_node = var.proxmox_node
+  vmid        = 9000
+
+  clone  = var.vm_template
+
+  cores  = 4
+  memory = 8192
+
+  network {
+    bridge = var.network_bridge
+    model  = "virtio"
+  }
+
+  ipconfig0 = "ip=dhcp"
+  sshkeys   = var.ssh_public_key_homelab
+}</code></pre>
+            </div>
+
+            <p class="leading-relaxed">A lógica é a mesma que usei para criar uma EC2 na AWS (<a href="post-iac-terraform.html" class="text-emerald-400 hover:underline">aqui</a>). Você declara o estado desejado e o Terraform garante que ele existe. A diferença é que ao invés de chamar a API da AWS, ele chama a API do Proxmox.</p>
+            
+            <p class="leading-relaxed">O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">storage-server</code> tem um disco adicional de 100GB declarado separado do disco do OS. Esse é o volume que vai ser exportado via NFS depois:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>disk {
+  slot    = "scsi1"
+  size    = "100G"
+  storage = var.storage_pool
+}</code></pre>
+            </div>
+
+            <p class="leading-relaxed">E o LXC de monitoramento usa um resource diferente das VMs. <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">proxmox_lxc</code> ao invés de <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">proxmox_vm_qemu</code>, porque LXC não emula hardware completo, compartilha o kernel do Proxmox e é bem mais leve pra serviços que não precisam de isolamento total:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>resource "proxmox_lxc" "monitoring" {
+  hostname    = var.monitoring_server
+  target_node = var.proxmox_node
+  vmid        = 9020
+
+  ostemplate = var.lxc_template
+
+  cores  = 2
+  memory = 1024
+
+  network {
+    name   = "eth0"
+    bridge = var.network_bridge
+    ip     = "dhcp"
+  }
+
+  rootfs {
+    size    = "20G"
+    storage = var.storage_pool
+  }
+
+  ssh_public_keys = var.ssh_public_key_homelab
+}</code></pre>
+            </div>
+
+            <p class="leading-relaxed">As variáveis sensíveis (senha do Proxmox e chave SSH) ficam no HCP Terraform e nunca entram no repositório. Mesmo padrão que uso na infra do <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">luisbrancher.dev</code>.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Próximos passos</h2>
+            <p class="leading-relaxed">Esse foi o planejamento e a primeira camada de IaC. Nos próximos artigos vou cobrir:</p>
+            
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><strong class="text-zinc-200">Ansible</strong>: configuração do OS das VMs, instalação do k3s, setup do NFS e Tailscale em tudo</li>
+                <li><strong class="text-zinc-200">k3s</strong>: primeiros serviços rodando, Traefik como ingress, cert-manager pra TLS automático</li>
+                <li><strong class="text-zinc-200">ArgoCD</strong>: GitOps de verdade, deploy via git push</li>
+            </ul>
+
+            <p class="leading-relaxed">O código tá no GitHub em <a href="#" class="text-emerald-400 hover:underline">luisbrancher/homelab-infra</a> se quiser acompanhar.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
