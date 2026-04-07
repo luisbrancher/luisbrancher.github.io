@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>From manual to automated deployment with GitHub Actions | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="How I automated my website deployment using GitHub Actions, rsync, and Tailscale, including the problems I solved along the way.">
+    <meta property="og:title" content="From manual to automated deployment: my first pipeline with GitHub Actions | DevOps Portfolio">
+    <meta property="og:description" content="How I automated my website deployment using GitHub Actions, rsync, and Tailscale.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-github-actions-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-github-actions-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-github-actions.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-github-actions-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-github-actions.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-github-actions.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Post Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Post Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-04-02">Apr 02, 2026</time>
+                <span>•</span>
+                <span>5 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                From manual to automated deployment: my first pipeline with GitHub Actions
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">GITHUB ACTIONS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">CI/CD</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TAILSCALE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">RSYNC</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">DEVOPS</span>
+            </div>
+        </header>
+
+        <!-- Post Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">Every time I wrote a new blog article, the flow was the same: finish the HTML, open the terminal, manually run Ansible to copy the files to the server. It worked. But it was manual, boring, and I already understood that's not how it works in the market.</p>
+            
+            <p class="leading-relaxed">I decided to automate. The goal was simple: any push to the repository's <code>main</code> branch should automatically trigger the deployment, without me having to do anything. This article documents how I got there, including all the errors along the way.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What I had before</h2>
+            <p class="leading-relaxed">The server was already configured via Ansible: nginx running, Tailscale installed, files in <code>/var/www/luisbrancher.dev/</code>. The manual deploy was basically a <code>git clone</code> + <code>chown</code> that the playbook itself handled.</p>
+            
+            <p class="leading-relaxed">What I wanted was to eliminate this manual step. Push to repo → site updated. No opening terminals, no running Ansible.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The choice: GitHub Actions + rsync</h2>
+            <p class="leading-relaxed">GitHub Actions is GitHub's native CI/CD tool. Each workflow is a YAML file inside <code>.github/workflows/</code> in the repository itself. When the configured event happens, in my case a push to <code>main</code>, GitHub spins up a runner (an Ubuntu VM), executes the defined steps, and destroys everything at the end.</p>
+            
+            <p class="leading-relaxed">For the deployment itself, I chose rsync via SSH. Ansible was already using this approach underneath: rsync is the right tool to synchronize files between machines, transferring only what changed.</p>
+            
+            <p class="leading-relaxed">The server is accessible via Tailscale, so the runner would also need to enter my Tailnet before being able to reach the server.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Workflow structure</h2>
+            <p class="leading-relaxed">I created the <code>.github/workflows/deploy.yml</code> file:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>name: Deploy Site
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Connect on Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+          args: --accept-routes
+
+      - name: Fix ownership before deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo chown -R admin:admin /var/www/luisbrancher.dev/
+
+      - name: Deploy with rsync
+        uses: burnett01/rsync-deployments@7.0.1
+        with:
+          switches: -avz --delete --exclude='.git/'
+          path: ./
+          remote_path: /var/www/luisbrancher.dev/
+          remote_host: ${{ secrets.SERVER_HOST }}
+          remote_user: ${{ secrets.SERVER_USER }}
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Fix ownership after deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo chown -R www-data:www-data /var/www/luisbrancher.dev/</code></pre>
+            </div>
+
+            <p class="leading-relaxed">The flow in words:</p>
+            <ol class="list-decimal list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li>Runner spins up an Ubuntu VM</li>
+                <li>Checks out the repository</li>
+                <li>Enters my Tailnet with an ephemeral auth key</li>
+                <li>Changes the file owner on the server to <code>admin</code> (to allow writing)</li>
+                <li>rsync copies the files, excluding the <code>.git/</code> folder</li>
+                <li>Reverts the owner back to <code>www-data</code> (so nginx can read it)</li>
+                <li>Job finishes → runner is destroyed → automatically leaves the Tailnet</li>
+            </ol>
+
+            <p class="leading-relaxed">The secrets <code>TS_AUTHKEY</code>, <code>SERVER_HOST</code>, <code>SERVER_USER</code>, and <code>SSH_PRIVATE_KEY</code> are stored in <strong>Settings → Secrets and variables → Actions</strong> in GitHub. No credentials in the code.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The errors that appeared</h2>
+            <p class="leading-relaxed">It didn't work on the first try. Nor the second. Every error taught me something.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Error 1 — Permission denied (publickey)</h3>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-zinc-400"><code>Warning: Permanently added '***' (ED25519) to the list of known hosts.
+***@***: Permission denied (publickey).
+rsync: connection unexpectedly closed (0 bytes received so far) [sender]</code></pre></div>
+            <p class="leading-relaxed">Tailscale was working, the runner reached the server and registered the host. But SSH rejected the connection.</p>
+            <p class="leading-relaxed">The problem was the private key registered in the GitHub secret. An ED25519 key needs a newline at the end, and if you copy it without one, it arrives corrupted to the runner and SSH silently rejects it. I recreated the secret by carefully copying it from the terminal.</p>
+            <p class="leading-relaxed">Even so, the error persisted. Because the key I was using had a passphrase.</p>
+            <p class="leading-relaxed">The definitive solution was to create a dedicated pair for CI/CD, without a passphrase (the runner cannot interactively type a password):</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-emerald-400"><code>ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/id_ed25519_deploy</code></pre></div>
+            <p class="leading-relaxed">I added the public key to the server:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-emerald-400"><code>ssh -i ~/.ssh/id_ed25519 admin@&lt;IP-tailscale&gt; \
+  "echo '$(cat ~/.ssh/id_ed25519_deploy.pub)' &gt;&gt; ~/.ssh/authorized_keys"</code></pre></div>
+            <p class="leading-relaxed">And registered the private one in the secret. Separate personal and automation keys, it's the right practice anyway.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Error 2 — rsync: command not found</h3>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-zinc-400"><code>Identity added: (stdin) (github-actions-deploy)
+Warning: Permanently added '***' (ED25519) to the list of known hosts.
+bash: line 1: rsync: command not found</code></pre></div>
+            <p class="leading-relaxed">The key was working now. But rsync wasn't installed on the server. Ansible had never needed to install it because it used the <code>ansible.builtin.git</code> module to clone the repository, not direct rsync.</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-emerald-400"><code>sudo apt install rsync -y</code></pre></div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Error 3 — Permission denied on rsync</h3>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6"><pre class="text-sm text-zinc-400"><code>rsync: [receiver] mkstemp "/var/www/luisbrancher.dev/.index.html..." failed: Permission denied (13)</code></pre></div>
+            <p class="leading-relaxed">rsync connected, but couldn't write the files. The <code>/var/www/luisbrancher.dev/</code> directory belonged to <code>www-data</code> — the nginx user. The <code>admin</code> user didn't have write permissions.</p>
+            <p class="leading-relaxed">The solution was to add two <code>chown</code> steps around rsync: one before to change the owner to <code>admin</code>, one after to revert it to <code>www-data</code>. Nginx continues reading normally, and rsync can write during the deployment.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Error 4 — .git/ being copied to the server</h3>
+            <p class="leading-relaxed">In the same log as error 3, you could see the <code>.git/</code> folder being sent to the server along with the site files. It makes no sense to have this in <code>/var/www/</code>. The fix was adding <code>--exclude='.git/'</code> to the rsync switches.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What remained</h2>
+            <p class="leading-relaxed">The final workflow solves exactly what I needed. Push to <code>main</code> → site updated in seconds, without manual intervention.</p>
+            <p class="leading-relaxed">The next natural step is to publicly close port 22 in the Security Group via Terraform. Today it is still open, a technical debt documented since the IaC project. With deployments going through Tailscale, there is no longer a reason to keep SSH exposed.</p>
+            <p class="leading-relaxed">And when the new homelab is up with ArgoCD, the loop closes: GitHub Actions as CI in the site repository, ArgoCD as CD in the cluster. But that's a topic for another post.</p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 What I learned</h3>
+                <p class="leading-relaxed text-zinc-300">The biggest lesson wasn't technical, it was about troubleshooting. Every error in Actions appears in the log with enough details to understand what happened. The process is: read the error, identify the cause, fix it, commit, push, see the next error.</p>
+                <p class="leading-relaxed text-zinc-300 mt-4">That's how it works in practice. It's very cool when it works on the first try, but that's not always the reality. What matters is knowing how to read the log and not giving up on the second error.</p>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
