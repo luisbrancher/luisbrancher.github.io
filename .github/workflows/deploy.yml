@@ -30,7 +30,7 @@ jobs:
           switches: -avz --delete --exclude='.github/'
           path: ./
           remote_path: /var/www/luisbrancher.dev/
-          remote_host: ${{ secrets.SERVER_HOST }}  # IP Tailscale
+          remote_host: ${{ secrets.SERVER_HOST }}   # IP Tailscale
           remote_user: ${{ secrets.SERVER_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
