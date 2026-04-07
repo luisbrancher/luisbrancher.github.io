@@ -22,7 +22,7 @@ jobs:
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
           args: --accept-routes
-        # --accept-routes para enxergar outros devices
+        # --accept-routes para enxergar outros devices 
 
       - name: Deploy with rsync
         uses: burnett01/rsync-deployments@7.0.1
