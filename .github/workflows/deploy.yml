@@ -24,17 +24,25 @@ jobs:
           args: --accept-routes
         # --accept-routes para enxergar outros devices 
 
+      - name: Fix ownership before deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo chown -R admin:admin /var/www/luisbrancher.dev/
+
       - name: Deploy with rsync
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete --exclude='.github/'
+          switches: -avz --delete --exclude='.git/'
           path: ./
           remote_path: /var/www/luisbrancher.dev/
-          remote_host: ${{ secrets.SERVER_HOST }}    # IP Tailscale
+          remote_host: ${{ secrets.SERVER_HOST }}
           remote_user: ${{ secrets.SERVER_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Fix permissions
+      - name: Fix ownership after deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SERVER_HOST }}
