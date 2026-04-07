@@ -10,24 +10,34 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+     FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Conecta na rede Tailscale
+      - name: Connect on Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
           args: --accept-routes
-        # --accept-routes para enxergar os outros devices
+        # --accept-routes para enxergar outros devices
 
-      - name: Deploy via rsync
+      - name: Deploy with rsync
         uses: burnett01/rsync-deployments@7.0.1
         with:
-          switches: -avz --delete
+          switches: -avz --delete --exclude='.github/'
           path: ./
-          remote_path: /var/www/html/
-          remote_host: ${{ secrets.SERVER_HOST }}  # IP Tailscale do servidor
+          remote_path: /var/www/luisbrancher.dev/
+          remote_host: ${{ secrets.SERVER_HOST }}  # IP Tailscale
           remote_user: ${{ secrets.SERVER_USER }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Fix permissions
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: sudo chown -R www-data:www-data /var/www/luisbrancher.dev/
