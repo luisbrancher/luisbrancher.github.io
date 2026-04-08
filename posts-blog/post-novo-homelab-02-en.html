@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesigning my homelab #02: Ansible, NFS, and three days frying my brain | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="The layer that comes after Terraform: configuring VMs from scratch idempotently using Ansible, with NFS, Tailscale, and Node Exporter.">
+    <meta property="og:title" content="Redesigning my homelab #02: Ansible, NFS, and three days frying my brain | DevOps Portfolio">
+    <meta property="og:description" content="Configuring the homelab infrastructure from scratch idempotently using Ansible.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-novo-homelab-02-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-02-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-02.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-02-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-02.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-novo-homelab-02.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Post Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Post Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-04-08">Apr 08, 2026</time>
+                <span>•</span>
+                <span>6 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Redesigning my homelab #02: Ansible, NFS, and three days frying my brain
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">NFS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">PROXMOX</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">DEVOPS</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> View repository on GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Post Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">In the previous article (<a href="post-novo-homelab-01-en.html" class="text-emerald-400 hover:underline">here</a>) I talked about the planning, the new hardware, and Terraform to provision VMs in Proxmox. Today is Ansible's turn, the layer that comes in after the VMs exist and configures everything from scratch.</p>
+            
+            <p class="leading-relaxed">Spoiler: these were the most intense days so far. A lot of new things at the same time, plenty of doubts along the way, and a few "why isn't this working?" moments. But in the end it made sense, and I think showing this whole process is more useful than pretending I wrote everything perfectly on the first try.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What Ansible does in this stack</h2>
+            <p class="leading-relaxed">After <code>terraform apply</code>, you have VMs created but completely blank. Clean Debian 12, with nothing installed. Ansible connects via SSH to each one and runs a sequence of tasks to get everything configured: installs packages, formats disks, configures services, injects config files via templates.</p>
+            
+            <p class="leading-relaxed">The difference from what I used to do before (a bash script or following a tutorial) is that Ansible is <strong>idempotent</strong>. You can run the same playbook ten times and the result is always the same. If the package is already installed, it doesn't install it again. If the service is already running, it doesn't restart it. This changes how you think about server configuration.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The structure</h2>
+            <p class="leading-relaxed">The first question was: one giant playbook or multiple files? I started with the idea of an all-in-one <code>proxmox.yml</code>, but as I was writing it became obvious that each VM deserved its own file. The final structure looked like this:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>ansible/
+   ├── inventory.ini             → hosts and groups
+   ├── site.yml                  → main entrypoint, imports all playbooks
+   ├── group_vars/all/
+   │   ├── vars.yml              → shared variables
+   │   └── vault.yml             → encrypted secrets (Ansible Vault)
+   └── playbooks/
+        ├── proxmox.yml           → imports all Proxmox playbooks
+        ├── k3s-node.yml          → k3s + Tailscale + Node Exporter
+        ├── storage-server.yml    → NFS + Tailscale + Node Exporter
+        ├── monitoring.yml        → Prometheus + Grafana + Loki + Tailscale
+        ├── pi4.yml               → Omada + MotionEye + Tailscale + Node Exporter
+        └── templates/
+             ├── exports.j2            → /etc/exports (NFS)
+             ├── prometheus.yml.j2     → Prometheus scrape config
+             ├── grafana.ini.j2        → Grafana config
+             ├── loki-config.j2        → Loki config
+             ├── loki.service.j2       → Loki systemd service
+             └── upsnap.service.j2     → UpSnap systemd service</code></pre>
+            </div>
+
+            <p class="leading-relaxed"><code>site.yml</code> is the entrypoint for everything. You run <code>ansible-playbook site.yml</code> and it configures each machine in the right order. But you can also run just a specific playbook when you need to reconfigure only monitoring, for example.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The inventory and variables</h2>
+            <p class="leading-relaxed">One thing I learned early on: don't repeat configuration. <code>inventory.ini</code> only contains what is unique to each host, IP, and group:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>[proxmox_vms]
+k3s-node       ansible_host=&lt;IP&gt;
+storage-server ansible_host=&lt;IP&gt;
+lxc-monitoring ansible_host=&lt;IP&gt;
+
+[pi4]
+pi4 ansible_host=&lt;IP&gt;</code></pre>
+            </div>
+
+            <p class="leading-relaxed">The rest (SSH user, key, become) goes into <code>group_vars/all/vars.yml</code> and applies to everything automatically. If I change the SSH key one day, I change it in just one place.</p>
+            
+            <p class="leading-relaxed">The secrets are kept in <code>vault.yml</code> encrypted with Ansible Vault: Grafana password, Tailscale auth key. The file goes to git encrypted, the values are never exposed.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> k3s-node: simpler than it seemed</h2>
+            <p class="leading-relaxed">The k3s-node playbook was the most straightforward. k3s has an official installation script that handles everything:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Download and run k3s install script
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://get.k3s.io | sh
+    creates: /usr/local/bin/k3s</code></pre>
+            </div>
+
+            <p class="leading-relaxed">The <code>creates</code> is what guarantees idempotency here. If the binary already exists, the task is skipped. No need to check the version or anything, just check if the binary is there.</p>
+            
+            <p class="leading-relaxed">After that: ensure the service is running on boot, install Node Exporter to expose metrics to Prometheus, and install Tailscale. This pattern of Tailscale + Node Exporter repeats on all machines, it's transversal infrastructure.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> storage-server: where I learned about NFS for real</h2>
+            <p class="leading-relaxed">I had never configured NFS seriously before. I knew what it was, but in practice I always used Samba or direct access. Here there was no way around it.</p>
+            
+            <p class="leading-relaxed">The flow is: format the extra disk, mount it, create the directories for each service, and export via NFS. Ansible has specific modules for each step:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Format disk with ext4
+  community.general.filesystem:
+    fstype: ext4
+    dev: "{{ storage_device }}"
+
+- name: Mount disk and add to fstab
+  ansible.builtin.mount:
+    path: "{{ storage_mount }}"
+    src: "{{ storage_device }}"
+    fstype: ext4
+    opts: defaults
+    state: mounted</code></pre>
+            </div>
+
+            <p class="leading-relaxed">The <code>mount</code> with <code>state: mounted</code> does two things at once: mounts the disk now and adds it to <code>/etc/fstab</code> to persist after a reboot. One module, two problems solved.</p>
+            
+            <p class="leading-relaxed">The data directories use a <code>loop</code> over the same list that defines the NFS exports, the single source of truth:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Create data directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: '0755'
+  loop: "{{ nfs_exports }}"</code></pre>
+            </div>
+
+            <p class="leading-relaxed">When I add a new service, I just add an entry in <code>vars.yml</code> and it automatically creates the directory and exports it via NFS. No risk of creating the directory and forgetting to export it.</p>
+            
+            <p class="leading-relaxed">The <code>/etc/exports</code> is generated by a Jinja2 template:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>{% for export in nfs_exports %}
+{{ export.path }}   {{ export.clients }}({{ export.options }})
+{% endfor %}</code></pre>
+            </div>
+
+            <p class="leading-relaxed">And the client IP (who can mount the NFS) is not hardcoded. It comes straight from the inventory:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>k3s_node_ip: "{{ hostvars['k3s-node']['ansible_host'] }}"</code></pre>
+            </div>
+
+            <p class="leading-relaxed">If the IP changes in the inventory, exports is automatically updated the next time the playbook runs.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> monitoring: the most laborious</h2>
+            <p class="leading-relaxed">Prometheus and Grafana were smooth, both have official packages, just add the repository and install. Loki was another story.</p>
+            
+            <p class="leading-relaxed">Loki doesn't have an official <code>.deb</code> package. It only has a binary on GitHub. So I had to manually do everything that <code>apt</code> would do automatically in a normal package: create a system user, download and unpack the binary, create config directories, generate the config file via template, and create a <code>.service</code> file for systemd.</p>
+            
+            <p class="leading-relaxed">This last point was one of the most interesting parts. For any process to become a service managed by the system (start on boot, restart if it crashes) it needs a <code>.service</code> file in <code>/etc/systemd/system/</code>. It's basically the OS-level equivalent of Docker Compose's <code>restart: unless-stopped</code>:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>[Service]
+User=loki
+ExecStart=/usr/local/bin/loki -config.file=/etc/loki/config.yml
+Restart=always</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Ansible generates this file via template and uses a handler to do <code>daemon-reload</code> and start the service. It only runs when the file was created or modified, not every time the playbook executes.</p>
+            
+            <p class="leading-relaxed">A doubt I had here: why not run Loki in Docker inside the LXC? The answer is that it would be unnecessary overhead. The LXC is enough isolation, adding Docker on top would be an extra layer with no real benefit.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Pi4: ARM has its peculiarities</h2>
+            <p class="leading-relaxed">The Pi4 runs Debian ARM, and that brought a catch that almost went unnoticed. The TP-Link Omada Controller provides separate installers by architecture. The standard you find in most tutorials is <code>linux_x64</code>, but on the Pi4 it is <code>linux_aarch64</code>. Installing the wrong version on an ARM fails silently in the best case.</p>
+            
+            <p class="leading-relaxed">MotionEye has no package in Debian 12's apt, it installs via pip. And both Omada and MotionEye are configured via their web interface after being installed, so Ansible only needs to install and ensure they are running. No config templates here.</p>
+            
+            <p class="leading-relaxed">For UpSnap I had to download the binary on GitHub. And just like with Loki, I had to manually do everything <code>apt</code> would do. I used a Jinja2 template for the systemd <code>.service</code>. A different point from Loki, which stores data locally in the LXC, UpSnap persists config via NFS mounted from the storage-server, so I also had to install the NFS client via <code>apt</code> here.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Imposter syndrome or just lack of practice?</h2>
+            <p class="leading-relaxed">During the day I had a strange feeling. I knew what each thing was doing, I could explain the logic, but without reference I wouldn't have reached the right syntax on the first try. Is this imposter syndrome or is this just how learning works?</p>
+            
+            <p class="leading-relaxed">I think it's the second option. No one memorizes the syntax of <code>ansible.builtin.mount</code> the first time. The difference between blindly following a tutorial and truly learning is being able to explain what each line does and why, and I can do that. The rest is repetition.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Next steps</h2>
+            <p class="leading-relaxed">With Terraform and Ansible ready, the infrastructure is defined from scratch to configured OS. The next step is k3s itself: YAML manifests for each service, Traefik as ingress, cert-manager for automatic TLS, and ArgoCD to close the GitOps loop.</p>
+            
+            <p class="leading-relaxed">All this while still traveling, before returning to Brazil and finally executing all this on real hardware.</p>
+            
+            <p class="leading-relaxed">The code is on GitHub at <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="text-emerald-400 hover:underline">luisbrancher/homelab-infra</a> if you want to follow along.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
