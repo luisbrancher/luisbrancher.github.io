@@ -123,7 +123,8 @@ N150
 
 Pi4
 ├── Omada Controller    → AP management
-└── MotionEye           → cameras</code></pre>
+├── MotionEye           → cameras
+└── UpSnap              → Wake-on-LAN</code></pre>
             </div>
 
             <p class="leading-relaxed">The central point is <strong class="text-zinc-200">k3s</strong> running on the main VM. k3s is a lightweight Kubernetes distribution that replaces Docker Compose with a declarative model. You describe the desired state of your services via YAML manifests and it continuously ensures everything is running. If a container crashes, it restarts automatically. Want to update an image? Change the manifest, do a git push, and ArgoCD applies it to the cluster by itself.</p>
@@ -158,17 +159,16 @@ ArgoCD      → GitOps, deploy via git push</code></pre>
 
             <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
 <pre class="text-sm text-zinc-300"><code>homelab-infra/
-└── terraform/
-    ├── main.tf             → terraform block + provider proxmox
-    ├── variables.tf        → all centralized variables
-    ├── outputs.tf          → VM IPs after apply
-    └── vms/
-        ├── k3s-node.tf
-        ├── storage-server.tf
-        └── monitoring.tf</code></pre>
+├── terraform/
+│   ├── main.tf                   → terraform block + proxmox provider
+│   ├── variables.tf              → all centralized variables
+│   ├── outputs.tf                → VM IPs after apply 
+│   ├── vm_k3s-node.tf
+│   ├── vm_storage-server.tf
+│   └── lxc_monitoring.tf</code></pre>
             </div>
 
-            <p class="leading-relaxed">File per VM. When I need to adjust only the k3s-node RAM, I go straight to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">k3s-node.tf</code> without navigating a giant <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">main.tf</code>.</p>
+            <p class="leading-relaxed">One file per VM. When I need to adjust only the k3s-node RAM, I go straight to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">vm_k3s-node.tf</code> without navigating a giant <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">main.tf</code>.</p>
             
             <p class="leading-relaxed">The main k3s VM looked like this:</p>
 
@@ -199,9 +199,10 @@ ArgoCD      → GitOps, deploy via git push</code></pre>
 
             <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
 <pre class="text-sm text-emerald-400"><code>disk {
-  slot    = "scsi1"
+  type    = "scsi"
+  slot    = 1
   size    = "100G"
-  storage = var.storage_pool
+  storage = var.data_storage_pool
 }</code></pre>
             </div>
 
