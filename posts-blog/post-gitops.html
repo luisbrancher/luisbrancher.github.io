@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitOps no homelab: como parei de rodar comandos e comecei a fazer git push | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Como estruturei o repositório e o cluster com ArgoCD para gerenciar todo o homelab de forma declarativa e automatizada.">
+    <meta property="og:title" content="GitOps no homelab: como parei de rodar comandos e comecei a fazer git push | DevOps Portfolio">
+    <meta property="og:description" content="Adoção de GitOps com ArgoCD e Kubernetes no meu homelab.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-gitops.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-gitops.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-gitops.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-gitops-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-gitops.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-gitops-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-04-20">20 Abr 2026</time>
+                <span>•</span>
+                <span>7 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                GitOps no homelab: como parei de rodar comandos e comecei a fazer git push
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">GITOPS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ARGOCD</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">KUBERNETES</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">IAC</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/homelab-gitops" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> Acessar repositório no GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">Quando decidi reconstruir meu homelab do zero com IaC, o objetivo era claro: nada de SSH pra subir serviço, nada de "deixa eu lembrar o que eu rodei aqui". Terraform pra provisionar as VMs no Proxmox, Ansible pra configurar o sistema operacional, k3s pra orquestrar os containers e ArgoCD pra fechar o ciclo. Tudo declarativo, tudo no git.</p>
+            
+            <p class="leading-relaxed">Essa última parte, o ArgoCD, foi onde eu passei mais tempo pensando antes de escrever qualquer código. Como foi minha primeira experiência com esse tipo de ferramenta, precisei entender um pouco sobre estrutura de arquivos e como organizar para tudo rodar certinho.</p>
+            
+            <p class="leading-relaxed">Como estou em viagem, estou escrevendo toda parte de IaC para deixar meu novo homelab pronto pra quando chegar em casa, para apenas instalar o bootstrap e rodar os comandos. Já tenho post aqui sobre o hardware e como usei terraform para provisionar (<a href="post-novo-homelab-01.html" class="text-emerald-400 hover:underline">aqui</a>). Toda a parte de configuração do Ansible (<a href="post-novo-homelab-02.html" class="text-emerald-400 hover:underline">aqui</a>). Nesse artigo, explico como configurar o k3s com ArgoCD e, quando retornar pra casa, provavelmente farei um post/vídeo rodando os códigos e fazendo o troubleshooting.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O problema que o ArgoCD resolve</h2>
+            <p class="leading-relaxed">Depois que o Ansible termina o trabalho e o k3s sobe, você tem um cluster funcional, mas vazio. A dúvida honesta é: como coloco meus serviços lá de um jeito que eu consiga reproduzir e entender daqui a seis meses?</p>
+            
+            <p class="leading-relaxed">Eu poderia usar <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">helm install</code> via linha de comando, mas seria apenas trocar um "docker manual" por um "kubernetes manual". Eu queria um estado declarativo real. Se o cluster explodir amanhã, não quero ter que lembrar de nada.</p>
+            
+            <p class="leading-relaxed">Com GitOps, você inverte a lógica: em vez de você empurrar as mudanças para o cluster, você declara como quer que as coisas sejam no Git e o ArgoCD se vira para garantir que o cluster reflita isso. A fonte da verdade sai do terminal e vai para o repositório.</p>
+            
+            <p class="leading-relaxed">Na prática: git push atualiza o serviço. Deu erro? Reverte o commit e o serviço volta ao estado anterior. Quer saber o que tem rodando? Basta olhar o repositório.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> App of Apps: gerenciando o gerenciador</h2>
+            <p class="leading-relaxed">O ArgoCD trabalha com um objeto chamado <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">Application</code>: cada um representa um serviço e diz de onde vem o chart, como configurar e onde instalar. Mas quem cria essas <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">Application</code> objects?</p>
+            
+            <p class="leading-relaxed">Se você cria manualmente, perde parte do benefício. A solução é o padrão <strong class="text-zinc-200">App of Apps</strong>: uma <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">Application</code> especial que aponta pro diretório <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">apps/</code> do repositório. O ArgoCD monitora esse diretório e qualquer arquivo <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.yaml</code> que aparecer lá vira automaticamente um novo serviço gerenciado.</p>
+            
+            <p class="leading-relaxed">Você aplica esse bootstrap <strong class="text-zinc-200">uma única vez</strong>, manualmente:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl apply -f bootstrap/argocd-app-of-apps.yaml</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">Depois disso, adicionar um novo serviço é só criar <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">apps/novo-servico.yaml</code> e dar <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">git push</code>. O ArgoCD detecta e sincroniza.</p>
+            
+            <p class="leading-relaxed">Essa foi uma das coisas que mais clicou pra mim durante o processo. A elegância está em ter um único ponto de entrada que desdobra todo o resto.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> A estrutura final</h2>
+            <p class="leading-relaxed">Depois de bastante iteração, o repositório <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">homelab-gitops</code> ficou assim:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>homelab-gitops/
+├── bootstrap/          # aplicado uma vez, manualmente
+├── apps/               # ArgoCD monitora esse diretório
+├── charts/             # values.yaml + PVCs por serviço
+└── config/             # configurações que não são serviços
+    └── cert-manager/</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">Cada serviço tem sua pasta em <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">charts/</code> com dois arquivos: <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">values.yaml</code> pra configurar o Helm chart e <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">pvc.yaml</code> pra declarar o storage. O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">apps/</code> tem só os manifests do ArgoCD, leves, sem configuração de negócio.</p>
+            
+            <p class="leading-relaxed">A separação parece óbvia depois de pronta, mas levou um tempo pra entender por que ela existe. O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">apps/nextcloud.yaml</code> responde "como fazer o deploy". O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">charts/nextcloud/values.yaml</code> responde "como o Nextcloud deve se comportar". São responsabilidades diferentes.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Dúvidas reais que tive</h2>
+            
+            <p class="leading-relaxed"><strong class="text-zinc-200">Um Helm release por serviço?</strong></p>
+            <p class="leading-relaxed">Sim. A tentação de agrupar serviços relacionados num release só é real, mas o isolamento compensa. Falha no Immich não afeta o Nextcloud. Rollback granular. Diff limpo no git. Vale a verbosidade.</p>
+            
+            <p class="leading-relaxed mt-6"><strong class="text-zinc-200">.yaml ou .yml?</strong></p>
+            <p class="leading-relaxed">Zero diferença técnica. A convenção do ecossistema Kubernetes é <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.yaml</code>, então é isso.</p>
+            
+            <p class="leading-relaxed mt-6"><strong class="text-zinc-200">Todo arquivo YAML começa com ---?</strong></p>
+            <p class="leading-relaxed">Não é obrigatório em arquivo com um único documento, mas é boa prática. Em arquivos com múltiplos recursos — como o <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">pvc.yaml</code> que tem PV e PVC juntos, o <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">---</code> separando cada objeto é obrigatório. Usar em todos os arquivos resolve o problema de ter que pensar caso a caso.</p>
+            
+            <p class="leading-relaxed mt-6"><strong class="text-zinc-200">Onde vai o API token da Cloudflare?</strong></p>
+            <p class="leading-relaxed">Essa foi a que mais gerou dúvida. A resposta é: nunca no git. O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ClusterIssuer</code> do cert-manager só referencia o nome de um Secret, o valor real você aplica via CLI:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl create secret generic cloudflare-api-token \
+  --namespace cert-manager \
+  --from-literal=api-token=SEU_TOKEN</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">O mesmo vale pra credenciais do Nextcloud, Immich, qualquer coisa sensível. O arquivo que fica no repo é um placeholder documentando a estrutura do Secret, sem nenhum valor real.</p>
+            <p class="leading-relaxed">No futuro isso evolui pra SOPS: você encripta o arquivo antes de commitar e aí sim pode versionar. Mas por enquanto, CLI resolve e é honesto com o estágio atual do projeto.</p>
+            
+            <p class="leading-relaxed mt-6"><strong class="text-zinc-200">O cert-manager sabe que a configuração está em config/cert-manager/?</strong></p>
+            <p class="leading-relaxed">Não automaticamente. O ArgoCD só monitora <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">apps/</code>. O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ClusterIssuer</code> e o Secret da Cloudflare você aplica manualmente — igual ao bootstrap. É uma exceção justificada: são recursos que você configura uma vez e raramente muda.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> A ordem importa</h2>
+            <p class="leading-relaxed">Uma coisa que aprendi: a ordem de deploy não é trivial quando os serviços têm dependências.</p>
+            
+            <p class="leading-relaxed">O cert-manager precisa estar healthy antes de criar o <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ClusterIssuer</code>. O <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ClusterIssuer</code> precisa existir antes de qualquer Ingress com a annotation <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">cert-manager.io/cluster-issuer</code>. Os PVCs precisam existir antes dos pods que os montam.</p>
+            
+            <p class="leading-relaxed">A sequência que funcionou:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-300"><code>namespaces → App of Apps → cert-manager healthy
+→ PVCs → ClusterIssuer → Secrets
+→ git push dos outros serviços</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">O ArgoCD tem um mecanismo chamado <strong class="text-zinc-200">sync waves</strong> pra automatizar essa ordenação — uma annotation que define em que "onda" cada recurso deve ser criado. É o próximo passo natural, mas não é necessário pra começar.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O que fica de fora do repo</h2>
+            <p class="leading-relaxed">Três categorias de coisas que não vão no <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">homelab-gitops</code>:</p>
+            
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><strong class="text-zinc-200">Secrets</strong> — valores sensíveis sempre via CLI</li>
+                <li><strong class="text-zinc-200">Infraestrutura</strong> — VMs, rede, storage físico ficam no <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">homelab-infra</code> (Terraform + Ansible)</li>
+                <li><strong class="text-zinc-200">Configuração de aplicação</strong> — a External Library do Immich apontando pro diretório de fotos do Nextcloud, por exemplo, você configura pela UI. Não tem como declarar isso em YAML.</li>
+            </ul>
+            
+            <p class="leading-relaxed">Essa última categoria me incomodou no começo. Parece que quebra o "tudo declarativo". Mas faz sentido aceitar: GitOps gerencia o estado da infraestrutura do cluster, não o estado interno da aplicação.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O que vem depois</h2>
+            <p class="leading-relaxed">O repo está funcional, mas tem espaço pra evoluir:</p>
+            
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><strong class="text-zinc-200">SOPS</strong> pra encriptar secrets e versionar com segurança</li>
+                <li><strong class="text-zinc-200">Sync waves</strong> pra automatizar a ordem de deploy</li>
+                <li><strong class="text-zinc-200">External Secrets Operator</strong> pra buscar secrets de um vault externo</li>
+                <li><strong class="text-zinc-200">Staging environment</strong> — um namespace separado pra testar mudanças antes de aplicar em produção</li>
+            </ul>
+            
+            <p class="leading-relaxed">Nenhum disso é necessário agora. O que existe já é um GitOps real: estado declarado no git, reconciliação automática, histórico completo de mudanças.</p>
+            <p class="leading-relaxed">Se o cluster morrer amanhã, eu sei exatamente o que precisa rodar pra voltar. E isso, no fim, era o objetivo.</p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 Resumo</h3>
+                <p class="leading-relaxed text-zinc-300">
+                    O repositório do cluster está aberto em <a href="https://github.com/luisbrancher/homelab-gitops" target="_blank" class="text-emerald-400 hover:underline">github.com/luisbrancher/homelab-gitops</a>. A infraestrutura que provisiona o cluster desde o bare metal está detalhada no repositório <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="text-emerald-400 hover:underline">homelab-infra</a>.
+                </p>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
