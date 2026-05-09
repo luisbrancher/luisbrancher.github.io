@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesigning my homelab #04: configuring the network before any server | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Configuring OPNsense on the edge, VLANs with a managed switch, and AP with OpenWrt, plus automation using Ansible.">
+    <meta property="og:title" content="Redesigning my homelab #04: configuring the network before any server | DevOps Portfolio">
+    <meta property="og:description" content="Configuring OPNsense on the edge, VLANs with a managed switch, and AP with OpenWrt.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-novo-homelab-03-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-03-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-03.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-03-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-03-en.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-novo-homelab-03.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-05-09">May 09, 2026</time>
+                <span>•</span>
+                <span>6 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Redesigning my homelab #04: configuring the network before any server
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">NETWORKING</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">OPNSENSE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">VLAN</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/homelab-network" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> View repository on GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">While traveling, I started writing my entire homelab in IaC for a redesign and automation of configurations to a new declarative state, all documented here. But upon arriving home, I realized that the first step would be to reconfigure my network, as I brought an n150 appliance to run as my new edge OPNsense, a new 2.5Gbe switch, and a Cudy TR3000 Travel Router that I bought on the trip, which will act as an AP while at home.</p>
+
+            <p class="leading-relaxed">To set it up, before plugging everything into the final rack, I decided to build a test bench. The idea was simple: configure the router, switch, and AP from scratch, validate that the VLANs work end-to-end, and only then migrate the real devices. Better to fail on the bench than take down the home network.</p>
+
+            <p class="leading-relaxed">The hardware this time: N150 with 4 NICs running bare metal OPNsense, SKS3200-8E2X managed switch, and a Cudy TR3000 with OpenWrt acting as a temporary AP until the Omada EAP650 comes online.</p>
+
+            <p class="leading-relaxed">In the end, everything worked, but not without a few resets along the way.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> BIOS first and foremost</h2>
+            <p class="leading-relaxed">Before booting the OPNsense installer, a few BIOS settings make a difference on a mini PC running as a router:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><strong class="text-zinc-200">Secure Boot and Fast Boot</strong>: disabled. Secure Boot prevents OPNsense from booting, Fast Boot can cause issues with NIC detection.</li>
+                <li><strong class="text-zinc-200">Power on after AC loss</strong>: enabled as "Power ON". Essential. If the power drops, the router boots up on its own without anyone pressing a button.</li>
+                <li><strong class="text-zinc-200">C-States / CPU Power Management</strong>: disabled. On a router, latency matters more than power saving. Deep sleep CPU states add latency to packet processing.</li>
+                <li><strong class="text-zinc-200">VT-x / Intel Virtualization</strong>: disabled. Not running VMs inside OPNsense, so it's not needed.</li>
+                <li><strong class="text-zinc-200">Wake on LAN</strong>: enabled, just to have the option later.</li>
+            </ul>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Installing OPNsense</h2>
+            <p class="leading-relaxed">For the disk, I chose <strong class="text-zinc-200">UFS</strong> instead of ZFS. The N150 has 8GB of RAM and will run only as a router. ZFS eats memory and makes sense when you have heavy storage and need snapshots. Here, there are neither, so UFS on the 128GB NVMe is sufficient for the hardware's lifespan.</p>
+
+            <p class="leading-relaxed">After the initial boot, OPNsense didn't auto-detect the ports. I had to use the manual auto-detect in the console: unplug and plug the cable in each port while it listens to which interface brought the link up. With 4 NICs, it's easy to mix them up without doing this.</p>
+
+            <p class="leading-relaxed">The final port config was:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li><code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">igc0</code> → WAN (cable from ISP router)</li>
+                <li><code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">igc3</code> → LAN trunk (cable to switch)</li>
+                <li><code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">igc1</code> and <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">igc2</code> → free for now</li>
+            </ul>
+
+            <p class="leading-relaxed">An important detail when configuring IPs via console: when it asks <strong class="text-zinc-200">"Restore web GUI access defaults?"</strong>, the answer is always <strong class="text-zinc-200">N</strong>. This option exists to recover lost access, not for initial setup. The first time, I answered Y without thinking and it reset the LAN to 192.168.1.x, which conflicted with the ISP router. I had to reconfigure.</p>
+
+            <p class="leading-relaxed">The LAN was set to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.10.1/24</code> with DHCP between <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.100</code> and <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.200</code>. I chose the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.x.x</code> range exactly to not collide with the ISP's <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">192.168.1.x</code> in the double NAT scenario.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> VLANs in OPNsense</h2>
+            <p class="leading-relaxed">With the basics working, it was time to create network segmentation. The plan was four VLANs:</p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">VLAN</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">ID</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Subnet</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">trusted</td>
+                            <td class="p-3 align-top">10</td>
+                            <td class="p-3 align-top">10.10.10.0/24</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">iot</td>
+                            <td class="p-3 align-top">20</td>
+                            <td class="p-3 align-top">10.10.20.0/24</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">guest</td>
+                            <td class="p-3 align-top">30</td>
+                            <td class="p-3 align-top">10.10.30.0/24</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 align-top">lab</td>
+                            <td class="p-3 align-top">40</td>
+                            <td class="p-3 align-top">10.10.40.0/24</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">The <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">trusted</code> one is the existing LAN. The other three were created under <strong class="text-zinc-200">Interfaces → Devices → VLAN</strong>, all with parent <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">igc3</code> (the port going to the switch).</p>
+
+            <p class="leading-relaxed">After assigning and enabling each interface, I configured the DHCP range in <strong class="text-zinc-200">Services → Dnsmasq → DHCP ranges</strong>: <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.100</code> to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">.200</code> in each, leaving the lower range free for static IPs of servers once the main homelab boots.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Firewall rules</h2>
+            <p class="leading-relaxed">OPNsense processes rules top to bottom. First match wins. So I always block before allowing.</p>
+
+            <p class="leading-relaxed">Logic by VLAN:</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">IoT and Guest</strong>: internet only, fully isolated. First block access to other private networks, then allow any destination.</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>[block] iot_net → lan_net
+[block] iot_net → guest_net
+[block] iot_net → lab_net
+[pass]  iot_net → any</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Same structure for guest, replacing the destinations.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">Lab</strong>: can talk to trusted, cannot talk to iot or guest.</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>[block] lab_net → guest_net
+[block] lab_net → iot_net
+[pass]  lab_net → any</code></pre>
+            </div>
+
+            <p class="leading-relaxed">One thing I learned while testing: you can't block <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.0.0.0/8</code> all at once to simplify. That includes the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.10.1</code> gateway, which is OPNsense itself. DHCP and DNS will break. The rules must be specific per destination subnet, using the network aliases (<code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">lan_net</code>, <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">iot_net</code>, etc.) that OPNsense resolves correctly.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Configuring the switch</h2>
+            <p class="leading-relaxed">The SKS3200-8E2X is an 8-port managed switch with 2 SFP+. VLAN config is under <strong class="text-zinc-200">Tagged VLAN</strong>.</p>
+
+            <p class="leading-relaxed">Before creating anything: <strong class="text-zinc-200">never touch VLAN 1</strong>. It's the default management VLAN. I removed ports from it once, lost access to the switch, and had to factory reset. Learned the hard way.</p>
+
+            <p class="leading-relaxed">The port layout became:</p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Port</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Function</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">1</td>
+                            <td class="p-3 align-top">Trunk → OPNsense (tagged on all VLANs)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">2 to 6</td>
+                            <td class="p-3 align-top">Access → trusted (untagged VLAN 10)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3 align-top">7</td>
+                            <td class="p-3 align-top">Trunk → Cudy AP (tagged on all VLANs)</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3 align-top">8</td>
+                            <td class="p-3 align-top">Trunk → Omada EAP650 AP (tagged on all VLANs)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Trunk ports receive frames with VLAN tags. Access ports deliver untagged traffic to the end device, which doesn't even know a VLAN exists. The switch does all the separation transparently.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> OpenWrt on Cudy as AP</h2>
+            <p class="leading-relaxed">This is where I spent most of my time. First, I needed to replace the Cudy factory OS with pure OpenWrt, using Cudy's own transition tool acting as a bridge to flash the new OS.</p>
+
+            <p class="leading-relaxed">With OpenWrt installed, the goal was to turn it into a dumb AP: disable DHCP, disable routing, and pass tagged VLANs to the switch.</p>
+
+            <p class="leading-relaxed">The first steps were straightforward:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li>Static IP <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.10.5</code> on LAN</li>
+                <li>DHCP disabled (OPNsense distributes IPs)</li>
+                <li>WAN interfaces deleted</li>
+                <li>Physical port eth0 (2.5GbE) added to LAN bridge</li>
+            </ul>
+
+            <p class="leading-relaxed">For the trusted SSID, everything worked first try. Untagged traffic leaves the AP, reaches port 7 on the switch which treats it as VLAN 10, and OPNsense delivers IP <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.10.x</code>. Phone connected, internet working.</p>
+
+            <p class="leading-relaxed">The issue started when I tried to add the iot SSID on VLAN 20.</p>
+
+            <p class="leading-relaxed">The wrong approach was creating the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">eth0.20</code> interface directly and assigning it to the SSID. The device appeared in the system, but the traffic never reached OPNsense. No DHCP logs, no connection attempts. The frame went into limbo somewhere.</p>
+
+            <p class="leading-relaxed">The reason: <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">eth0</code> is already part of <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan</code>. Creating <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">eth0.20</code> on top of it doesn't work as expected because the bridge intercepts the traffic before VLAN tagging happens.</p>
+
+            <p class="leading-relaxed">The correct solution is <strong class="text-zinc-200">Bridge VLAN filtering</strong> on <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan</code>. In <strong class="text-zinc-200">Network → Interfaces → Devices → br-lan → Bridge VLAN filtering</strong>, you enable and configure which VLANs pass through which ports.</p>
+
+            <p class="leading-relaxed">Attempt 1: I enabled filtering and added only VLAN 20 as tagged. Applied. The AP became inaccessible, automatic OpenWrt rollback. Physical reset.</p>
+
+            <p class="leading-relaxed">Attempt 2: I enabled filtering, added VLAN 20 tagged and VLAN 1 untagged. VLAN 1 ensures management traffic keeps flowing after the apply. Applied with "unchecked configuration apply" to skip waiting for connectivity confirmation. It worked.</p>
+
+            <p class="leading-relaxed">After applying, OpenWrt auto-created devices <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan.1</code> and <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan.20</code>. I edited the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">lan</code> interface to use <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan.1</code> as device (necessary tweak via SSH in <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">/etc/config/network</code>), created the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">iot</code> interface pointing to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">br-lan.20</code>, and tied the iot SSID to this interface.</p>
+
+            <p class="leading-relaxed">Phone connected to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">lfck-iot_2g</code>, IP <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">10.10.20.x</code> via OPNsense DHCP. End-to-end working.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Ansible: from scratchpad to real execution</h2>
+            <p class="leading-relaxed">With everything manually validated, the next phase was turning the process into code and running it for real. This step taught me the most about the difference between writing Ansible and executing Ansible.</p>
+
+            <p class="leading-relaxed">Three files in the repo: <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">hosts.ini</code> with inventory, <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">setup_opnsense.yml</code> to provision OPNsense via SSH and REST API, and <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">setup_cudy_ap.yml</code> to configure OpenWrt via SSH.</p>
+
+            <p class="leading-relaxed">The initial connectivity test:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>ansible -i ansible/hosts.ini opnsense -m ping --ask-vault-pass
+ansible -i ansible/hosts.ini cudy_ap -m raw -a "/bin/true" --ask-vault-pass</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Two problems right off the bat.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">Problem 1</strong>: the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ansible_user</code> created on OPNsense had no shell access. Ping failed with authentication error. I allowed shell access in the OPNsense dashboard and it was fixed.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">Problem 2</strong>: the hostname in the inventory duplicated the group name. I renamed the host from <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">opnsense</code> to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">n150</code> in <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">hosts.ini</code> to prevent conflicts.</p>
+
+            <p class="leading-relaxed">After ping worked on both:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>n150 | SUCCESS => { "ping": "pong" }
+cudy_ap | CHANGED | rc=0</code></pre>
+            </div>
+
+            <p class="leading-relaxed">I ran <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">setup_opnsense.yml</code> and the real errors started.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">Collection</strong>: the <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">oxlorg.opnsense.firewall_rule</code> module didn't exist. The correct name in the collection is <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">oxlorg.opnsense.rule</code>. A one-line diff, half an hour of debugging reading documentation.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">become</strong>: I added <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">become: true</code> to run commands like sudo on OPNsense. It didn't work, FreeBSD behaves differently than Linux here. Pragmatic fix: swapped directly to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">ansible_user=root</code>.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">Firmware update</strong>: <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">poll: 0</code> caused Ansible to fire off the update and move on without waiting for it to finish, breaking the subsequent tasks. Removed <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">poll: 0</code> so it'd wait for the update to complete before continuing. I also added a <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">wait_for</code> on port 443 to wait for OPNsense to come back online after the reboot.</p>
+
+            <p class="leading-relaxed"><strong class="text-zinc-200">changed_when</strong>: tasks like kernel optimization and PowerD reported <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">changed</code> every run, even when they didn't alter anything. I added <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">changed_when: false</code> to naturally idempotent tasks to keep the output clean.</p>
+
+            <p class="leading-relaxed">The most interesting issue was DHCP. While running the playbook, I noticed resources were being created in <strong class="text-zinc-200">Kea DHCP</strong> instead of Dnsmasq. OPNsense 26.x migrated to Kea as the default DHCP service. I decided to keep and adapt: configured everything in Kea and added a task at the end to completely disable Dnsmasq, leaving just one active service.</p>
+
+            <p class="leading-relaxed">Another tweak: VLANs in OPNsense are referenced internally by identifiers (<code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">opt1</code>, <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">opt2</code>, <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">opt3</code>), not by the names you set in the UI. Firewall rules and DHCP config must use these identifiers. I had to map them manually in the loop:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- { friendly_name: 'iot', internal_iface: 'opt1', source_net: '10.10.20.0/24', ... }</code></pre>
+            </div>
+
+            <p class="leading-relaxed">In <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">setup_cudy_ap.yml</code> the issue was different: OpenWrt doesn't have Python installed by default. The Ansible <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">shell</code> module relies on Python on the remote host. I switched all <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">shell</code> tasks to <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">raw</code>, which executes commands directly over SSH without needing an interpreter.</p>
+
+            <p class="leading-relaxed">The final bug was on the SSIDs. The early version used <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">uci add wireless wifi-iface</code> — which creates anonymous entries without a name. When Ansible checked if the SSID already existed on the next run, it couldn't find it by name and created a duplicate. The fix was using <code class="text-emerald-400 bg-zinc-800/50 px-1 py-0.5 rounded text-sm">uci set wireless.wifinet_trusted=wifi-iface</code> with an explicit name, making the operation idempotent by default.</p>
+
+            <p class="leading-relaxed">After all these tweaks:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>ansible-playbook -i ansible/hosts.ini ansible/playbooks/setup_opnsense.yml --ask-vault-pass
+ansible-playbook -i ansible/hosts.ini ansible/playbooks/setup_ap.yml --ask-vault-pass</code></pre>
+            </div>
+
+            <p class="leading-relaxed">All green.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What's done</h2>
+            <p class="leading-relaxed">Test bench working with IaC validated end-to-end:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4 mb-6 text-zinc-300">
+                <li>OPNsense routing and enforcing stateful firewall between VLANs</li>
+                <li>Switch pushing VLANs via trunk to correct ports</li>
+                <li>AP broadcasting trusted and iot on separate SSIDs, each handing out IPs for the correct subnet</li>
+                <li>DHCP responding successfully on each VLAN via Kea</li>
+                <li>Static IPs reserved for switch, AP, and workstation</li>
+                <li>Internet working via ISP's double NAT</li>
+                <li>Idempotent playbooks — can run multiple times with no side effects</li>
+            </ul>
+
+            <p class="leading-relaxed">The next step is to plug the Omada EAP650 into port 8 of the switch, add guest and lab SSIDs, and migrate the current network devices. After that, Unbound DNS for internal homelab subdomains resolution and Tailscale on OPNsense.</p>
+
+            <p class="leading-relaxed">The code is up on <a href="https://github.com/luisbrancher/homelab-network" target="_blank" class="text-emerald-400 hover:underline">homelab-network</a>.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+</body>
+</html>
