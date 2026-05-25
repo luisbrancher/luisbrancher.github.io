@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reformulando meu homelab #05: Proxmox, storage e Terraform | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Como provisionei meu novo servidor Proxmox, configurei storage btrfs e debuguei a implantação de IaC com Terraform HCP Agent.">
+    <meta property="og:title" content="Reformulando meu homelab #05: Proxmox, storage e Terraform na prática | DevOps Portfolio">
+    <meta property="og:description" content="Primeiro dia com as mãos no hardware: rodando comandos, vendo o que quebra e consertando a automação de infraestrutura.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-proxmox-terraform.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-proxmox-terraform.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-proxmox-terraform.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-proxmox-terraform.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-proxmox-terraform-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-05-20">20 Mai 2026</time>
+                <span>•</span>
+                <span>10 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Reformulando meu homelab #05: Proxmox, storage e Terraform na prática
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">PROXMOX</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TERRAFORM</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">IAC</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">STORAGE</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> Acessar repositório no GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed">Nos artigos anteriores falei sobre o planejamento, o hardware, como escrevi o código de IaC durante a viagem e a configuração da rede com OpnSense. Esse aqui é diferente: é o primeiro dia com as mãos no hardware de verdade, rodando os comandos, vendo o que quebra e consertando.</p>
+            
+            <p class="leading-relaxed">Um detalhe de contexto antes: o hardware que eu planejei usar era um i5 1345U fanless que eu tinha em casa. Chegando do Brasil, o mini PC apresentou problemas e tive que mudar de plano. Comprei um Lenovo ThinkCentre pra substituir, mas enquanto ele não chega, resolvi fazer o deploy no Ryzen 5800X que ainda tá de pé. A ideia era rodar tudo no hardware provisório, validar que o código funciona, depurar o que precisar, e quando o Lenovo chegar é só repetir o processo em hardware limpo.</p>
+            
+            <p class="leading-relaxed">Dois dias depois, aprendi bastante coisa que não estava no plano.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Dia 01: Proxmox, storage e preparando tudo pro Terraform</h2>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Instalando o Proxmox</h3>
+            <p class="leading-relaxed">Instalação direta via ISO, sem nada de especial aqui. O Proxmox detectou os discos e configurou o LVM no NVMe principal automaticamente. O que precisei decidir manualmente foi o que fazer com os outros discos.</p>
+            
+            <p class="leading-relaxed">Meu setup de discos ficou assim:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li><strong>NVMe</strong> (465GB): OS do Proxmox + discos de VM via LVM (<code>local-lvm</code>)</li>
+                <li><strong>SATA SSD</strong> (931GB): dados persistentes dos serviços</li>
+                <li><strong>2x HDs SATA</strong> (931GB cada): backups, por enquanto ignorados, depois vão via USB no hardware final</li>
+            </ul>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Configurando o storage do SATA SSD</h3>
+            <p class="leading-relaxed">O SSD veio com dados do ZimaOS anterior. A primeira decisão foi formatar para começar limpo e evitar surpresa.</p>
+            
+            <p class="leading-relaxed">Escolhi <strong>btrfs</strong> em vez de ext4. Snapshots nativos por subvolume, compressão transparente com zstd e checksumming pra detectar corrupção silenciosa. Pra um disco que vai guardar fotos do Immich e arquivos do Nextcloud faz diferença.</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>mkfs.btrfs -f -L data-sata /dev/sdc
+mkdir -p /mnt/data
+mount /dev/sdc /mnt/data</code></pre>
+            </div>
+
+            <p class="leading-relaxed">No fstab usando UUID pra não depender da letra do dispositivo, que pode mudar:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>echo 'UUID=c0954474-c348-446e-90d7-dbd521e7070e /mnt/data btrfs defaults,compress=zstd,noatime 0 0' &gt;&gt; /etc/fstab
+mount -o remount /mnt/data
+systemctl daemon-reload</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Em vez de jogar tudo na raiz do disco, criei subvolumes separados por serviço. Cada subvolume pode ter política de snapshot própria no futuro:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>btrfs subvolume create /mnt/data/nextcloud
+btrfs subvolume create /mnt/data/immich
+btrfs subvolume create /mnt/data/upsnap
+btrfs subvolume create /mnt/data/backups</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Depois registrei o disco no Proxmox pra ele aparecer como opção de storage:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>pvesm add dir data-sata --path /mnt/data --content images,rootdir,backup</code></pre>
+            </div>
+
+            <p class="leading-relaxed">No final ficaram três pools disponíveis:</p>
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Nome</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Tipo</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Uso</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>local-lvm</code></td>
+                            <td class="p-3">LVM-Thin (NVMe)</td>
+                            <td class="p-3">Discos de VM e LXC</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>data-sata</code></td>
+                            <td class="p-3">Directory (btrfs)</td>
+                            <td class="p-3">Dados persistentes</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3"><code>local</code></td>
+                            <td class="p-3">Directory</td>
+                            <td class="p-3">ISOs e templates</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Criando o usuário do Terraform no Proxmox</h3>
+            <p class="leading-relaxed">O Terraform precisa de acesso à API do Proxmox. Uma boa prática é criar um usuário dedicado com só as permissões que ele precisa, sem usar root. Fiz pela UI pra me familiarizar com o Proxmox:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li><strong>Datacenter → Users → Add</strong>: usuário <code>terraform</code>, realm <code>Proxmox VE authentication server</code>.</li>
+                <li><strong>Datacenter → Roles → Create</strong>: role <code>TerraformRole</code> com os privilégios necessários.</li>
+                <li><strong>Datacenter → Permissions → Add → User Permission</strong>: associei a <code>TerraformRole</code> ao <code>terraform@pve</code> com path <code>/</code> e Propagate marcado.</li>
+                <li><strong>Datacenter → Permissions → API Tokens → Add</strong>: token ID <code>terraform-token</code>, com <strong>Privilege Separation desmarcado</strong>. Esse detalhe é importante porque com privsep ativo o token fica mais restrito que o usuário mesmo tendo a role correta.</li>
+            </ul>
+            <p class="leading-relaxed mt-4">O secret gerado aparece uma única vez. Copiei pro HCP Terraform.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Criando o VM template (Debian 13 cloud-init)</h3>
+            <p class="leading-relaxed">Fui de Debian 13 Trixie direto, já é stable desde junho de 2025, sem motivo pra usar o 12.</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>cd /tmp
+wget https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">Aqui tive uma pausa forçada de 20 minutos. O wget falhou com <code>Temporary failure in name resolution</code>. O OPNsense não tinha internet. Tinha mudado ele de lugar antes e o cabo estava mal encaixado. Reconectei os cabos, ping no 8.8.8.8 voltou, wget funcionou. Mas levei um tempinho até perceber que o problema era apenas cabo mal encaixado.</p>
+            
+            <p class="leading-relaxed">Com a imagem baixada, os passos pra criar o template via CLI:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code># cria a VM base (ID 9000 é convencional pra templates)
+qm create 9000 --name "debian-13-template" --memory 2048 --cores 2 --net0 virtio,bridge=vmbr0
+
+# importa o disco pro local-lvm
+qm importdisk 9000 /tmp/debian-13-genericcloud-amd64.qcow2 local-lvm
+
+# conecta o disco importado como boot disk
+qm set 9000 --scsihw virtio-scsi-pci --scsi0 local-lvm:vm-9000-disk-0
+
+# adiciona o drive de cloud-init, que injeta usuário, SSH key e rede nas VMs clonadas
+qm set 9000 --ide2 local-lvm:cloudinit
+
+# configura boot order e serial, necessário pro cloud-init funcionar
+qm set 9000 --boot c --bootdisk scsi0
+qm set 9000 --serial0 socket --vga serial0
+
+# redimensiona o disco base pra 31GB
+qm resize 9000 scsi0 +28G
+
+# converte pra template
+qm template 9000</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/debian-template.png" alt="Debian Template" class="rounded border border-zinc-800 my-6 max-w-full">
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">LXC template</h3>
+            <p class="leading-relaxed">Esse não precisa criar, só baixar:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>pveam update
+pveam download local debian-13-standard_13.1-2_amd64.tar.zst</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Configurando o HCP Terraform</h3>
+            <p class="leading-relaxed">Criei um projeto <code>homelab</code> e um workspace <code>homelab-infra</code> no HCP Terraform, com execution mode <strong>CLI-driven</strong> pra rodar via terminal.</p>
+            <p class="leading-relaxed">Quatro variáveis do tipo Terraform:</p>
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Variável</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800 text-center">Sensitive</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>pm_api_token_id</code> → <code>terraform@pve!terraform-token</code></td>
+                            <td class="p-3 text-center">❌</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>pm_api_token_secret</code> → secret gerado</td>
+                            <td class="p-3 text-center">✅</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>pm_api_url</code> → <code>https://10.10.10.116:8006/api2/json</code></td>
+                            <td class="p-3 text-center">❌</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3"><code>ssh_public_key</code> → conteúdo do <code>id_ed25519.pub</code></td>
+                            <td class="p-3 text-center">❌</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="leading-relaxed">Um erro que cometi aqui: marquei o <code>pm_api_token_id</code> como sem querer HCL. O <code>!</code> no valor (<code>terraform@pve!terraform-token</code>) quebra o parser HCL. Desmarcando resolve.</p>
+            <img src="../assets/images-proxmox-terraform/variables-hcp.png" alt="Variáveis HCP Terraform" class="rounded border border-zinc-800 my-6 max-w-full">
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Ajustes no código antes de rodar</h3>
+            <p class="leading-relaxed">O código que escrevi na viagem tinha algumas coisas pra ajustar antes de rodar:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li>Migrou auth de user/password pra API token</li>
+                <li>Adicionou bloco <code>cloud {}</code> apontando pro workspace no HCP</li>
+                <li>Corrigiu VMIDs: template é 9000, VMs usam 100, 110, 120</li>
+                <li>Adicionou disco de OS explícito em cada VM, o provider não herda do template automaticamente</li>
+                <li>Disco de dados da <code>storage-server</code>: 800G no <code>data-sata</code></li>
+                <li>Atualizado <code>lxc_template</code> default pro Debian 13</li>
+            </ul>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">O problema do runner na nuvem</h3>
+            <p class="leading-relaxed">Primeiro <code>terraform plan</code>, primeiro erro:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>dial tcp 10.10.10.116:8006: connect: network is unreachable</code></pre>
+            </div>
+            <p class="leading-relaxed">O HCP Terraform roda os plans nos servidores da HashiCorp, que não têm como alcançar <code>10.10.10.116</code> da minha rede local.</p>
+            <p class="leading-relaxed">A solução é o <strong>HCP Terraform Agent</strong>: um processo que roda dentro da sua rede e puxa os jobs do HCP via conexão de saída, sem precisar abrir porta nenhuma.</p>
+            <p class="leading-relaxed">No HCP: <strong>Settings → Agents → Create agent pool</strong> → <code>homelab-agent</code>. Copia o token.</p>
+            <p class="leading-relaxed">No workspace: <strong>Settings → General → Execution Mode</strong> → Agent → <code>homelab-agent</code>.</p>
+            <p class="leading-relaxed">Rodei o agente via Docker no meu PC:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>docker run -d \
+  --name tfc-agent \
+  --restart unless-stopped \
+  -e TFC_AGENT_TOKEN="TOKEN_AQUI" \
+  -e TFC_AGENT_NAME="homelab-agent" \
+  hashicorp/tfc-agent:latest</code></pre>
+            </div>
+            <p class="leading-relaxed">Com o agente registrado, o plan passou do erro de conectividade e começou a bater na API do Proxmox de verdade.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Debugging do plan</h3>
+            
+            <p class="leading-relaxed font-bold">Erro 1</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>user terraform@pve has valid credentials but cannot retrieve user list,
+check privilege separation of api token</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/erro-token.png" alt="Erro Token" class="rounded border border-zinc-800 my-4 max-w-full">
+            <p class="leading-relaxed">Faltava <code>Sys.Audit</code> na <code>TerraformRole</code>:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>pveum role modify TerraformRole -privs "Sys.Audit"</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">Erro 2</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>permissions for user/token terraform@pve are not sufficient,
+missing: [VM.Monitor]</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/erro-token2.png" alt="Erro Token 2" class="rounded border border-zinc-800 my-4 max-w-full">
+            <p class="leading-relaxed">O provider <code>telmate/proxmox</code> 3.x ainda exigia <code>VM.Monitor</code> que o Proxmox 9 não tem mais. Pesquisando, vi que a versão <code>3.0.2-rc07</code> resolve isso e que a comunidade estava migrando em massa pro <code>bpg/proxmox</code>. Decidi testar a rc07 primeiro pra fechar o dia.</p>
+
+            <p class="leading-relaxed font-bold mt-6">Erro 3</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>The argument "id" is required, but no definition was found.</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/erro-plan3.png" alt="Erro Plan 3" class="rounded border border-zinc-800 my-4 max-w-full">
+            <p class="leading-relaxed">O provider 3.x mudou a sintaxe do bloco network. Adicionei <code>id = 0</code>.</p>
+
+            <p class="leading-relaxed font-bold mt-6">Erro 4</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>slot must be one of 'ide0', 'scsi0'...
+type must be one of 'disk', 'cdrom', 'cloudinit', 'ignore'</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/erro-plan4.png" alt="Erro Plan 4" class="rounded border border-zinc-800 my-4 max-w-full">
+            <p class="leading-relaxed">Mais mudança de sintaxe no 3.x: <code>slot = 0</code> virou <code>slot = "scsi0"</code> e <code>type = "scsi"</code> virou <code>type = "disk"</code>. Corrigi os dois.</p>
+            
+            <p class="leading-relaxed">Plan verde. Apply funcionou. As VMs subiram no Proxmox.</p>
+            <p class="leading-relaxed">O output não retornou IPs porque o provider <code>telmate</code> depende do QEMU Guest Agent pra ler o IP, e as VMs clonadas do template não tinham ele instalado. Isso era pra ser resolvido pelo Ansible, mas sem IP o Ansible não conseguiria conectar. Ovo e galinha.</p>
+            <p class="leading-relaxed">Decidi não perder tempo resolvendo isso no provider antigo, era hora de migrar pro <code>bpg/proxmox</code> de qualquer forma.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Dia 02: migrando pro bpg/proxmox e consertando o guest agent</h2>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Por que trocar de provider</h3>
+            <p class="leading-relaxed">Depois de dois erros seguidos de compatibilidade com o Proxmox 9 no <code>telmate/proxmox</code>, pesquisei e confirmei o que estava vendo nas issues do GitHub: a comunidade migrou pro <code>bpg/proxmox</code>. É mantido ativamente, tem suporte nativo ao Proxmox 9 sem gambiarras de permissão e a documentação é bem mais completa.</p>
+            <p class="leading-relaxed">Valeu manter o <code>telmate</code> pra exercitar o troubleshooting, mas sem motivo pra continuar com ele.</p>
+            <p class="leading-relaxed">Dei destroy nas VMs e comecei a migração.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">As mudanças no código</h3>
+            <p class="leading-relaxed">O <code>bpg/proxmox</code> é uma reescrita, não uma atualização. Os nomes dos recursos, atributos e blocos mudaram bastante.</p>
+            
+            <p class="leading-relaxed"><strong><code>main.tf</code></strong>: sintaxe de auth completamente diferente. O token vira uma string única no formato <code>user@realm!tokenid=secret</code>, e o provider precisa de um bloco <code>ssh</code> quando usa API token:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>provider "proxmox" {
+  endpoint  = var.pm_api_url
+  api_token = "${var.pm_api_token_id}=${var.pm_api_token_secret}"
+  insecure  = true
+
+  ssh {
+    agent    = true
+    username = "root"
+  }
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">O bloco <code>ssh</code> é necessário porque alguns recursos do provider usam SSH além da API REST. Com <code>agent = true</code> usa a chave do SSH agent sem precisar de senha. Por isso copiei minha <code>id_ed25519.pub</code> pro Proxmox antes:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>ssh-copy-id -i /mnt/c/Users/luisf/.ssh/id_ed25519.pub root@10.10.10.116</code></pre>
+            </div>
+
+            <p class="leading-relaxed"><strong>VMs</strong>: <code>proxmox_vm_qemu</code> virou <code>proxmox_virtual_environment_vm</code>. Praticamente tudo mudou:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>resource "proxmox_virtual_environment_vm" "k3s_node" {
+  name      = var.k3s_server
+  node_name = var.proxmox_node
+  vm_id     = 100
+
+  clone {
+    vm_id = var.vm_template_id  # número, não string
+  }
+
+  cpu {
+    cores = 4
+    type  = "host"
+  }
+
+  memory {
+    dedicated = 8192
+  }
+
+  disk {
+    interface    = "scsi0"
+    size         = 50           # número, não "50G"
+    datastore_id = var.storage_pool
+  }
+
+  network_device {
+    bridge = var.network_bridge
+    model  = "virtio"
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+    user_account {
+      keys = [var.ssh_public_key]
+    }
+  }
+}</code></pre>
+            </div>
+
+            <p class="leading-relaxed"><strong>LXC</strong>: <code>proxmox_lxc</code> virou <code>proxmox_virtual_environment_container</code>:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>resource "proxmox_virtual_environment_container" "monitoring" {
+  unprivileged = true
+  node_name    = var.proxmox_node
+  vm_id        = 120
+
+  initialization {
+    hostname = var.monitoring_server
+    ip_config {
+      ipv4 { address = "dhcp" }
+    }
+    user_account {
+      keys = [var.ssh_public_key]
+    }
+  }
+
+  operating_system {
+    template_file_id = var.lxc_template
+    type             = "debian"
+  }
+
+  features {
+    nesting = true
+  }
+  ...
+}</code></pre>
+            </div>
+            <p class="leading-relaxed">O <code>unprivileged = true</code> e <code>nesting = true</code> vieram do troubleshooting, mais sobre isso abaixo.</p>
+            <p class="leading-relaxed"><strong>variables.tf</strong>: removi <code>vm_template</code> (string com nome) e adicionei <code>vm_template_id</code> (number). O <code>bpg/proxmox</code> referencia o template pelo ID numérico, não pelo nome.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Apply e os warnings</h3>
+            <p class="leading-relaxed">O plan funcionou limpo com o novo provider. O apply subiu as 3 VMs/LXC em menos de 30 segundos, mas com 3 warnings.</p>
+            <img src="../assets/images-proxmox-terraform/apply-ok-new-provider.png" alt="Apply OK New Provider" class="rounded border border-zinc-800 my-4 max-w-full">
+            
+            <p class="leading-relaxed font-bold">Warnings 1 e 2</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>Permission check failed (/vms/110, VM.GuestAgent.Audit|VM.GuestAgent.Unrestricted)</code></pre>
+            </div>
+            <p class="leading-relaxed">O <code>bpg/proxmox</code> tenta ler o IP via guest agent logo após criar as VMs. A <code>TerraformRole</code> não tinha essas permissões:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-6">
+<pre class="text-sm text-emerald-400"><code>pveum role modify TerraformRole -privs "VM.GuestAgent.Audit VM.GuestAgent.Unrestricted"</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">Warning 3</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>WARN: Systemd 257 detected. You may need to enable nesting.</code></pre>
+            </div>
+            <p class="leading-relaxed">O Debian 13 usa Systemd 257, que precisa de nesting habilitado no LXC pra gerenciar serviços corretamente. Tentei adicionar <code>features { nesting = true }</code> no código, mas o apply falhou:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>Permission check failed (changing feature flags for privileged container
+is only allowed for root@pam)</code></pre>
+            </div>
+            <p class="leading-relaxed">Container privilegiado só aceita mudança de features via <code>root@pam</code>, não via token da API. A solução é container não privilegiado com <code>unprivileged = true</code>, que além de resolver o problema de permissão é a prática recomendada pra segurança em LXC.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">O problema do guest agent no template</h3>
+            <p class="leading-relaxed">O apply estava quase perfeito, mas os outputs das VMs voltavam <code>127.0.0.1</code> em vez do IP real. O provider lia o primeiro endereço do guest agent, que é o <code>lo</code>, não o <code>ens18</code>. Fix simples no <code>outputs.tf</code>: <code>ipv4_addresses[0][0]</code> virou <code>ipv4_addresses[1][0]</code>.</p>
+            <p class="leading-relaxed">Mas o problema raiz era outro: as VMs só tinham IPs visíveis via guest agent porque o template já vinha com ele instalado. No apply anterior, as VMs não tinham guest agent e os IPs não apareciam em lugar nenhum. Precisava resolver isso no template.</p>
+
+            <p class="leading-relaxed font-bold mt-4">1. Converter o template de volta pra VM normal:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code>qm set 9000 --template 0</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">2. Clonar pra uma VM temporária:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code>qm clone 9000 999 --name "debian-13-temp"
+qm start 999</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">3. O problema ovo-galinha</p>
+            <p class="leading-relaxed">A VM clonada do template cloud-init não tem senha configurada, só aceita login via SSH key. Mas sem guest agent não tem IP visível, e sem IP não dá pra conectar via SSH. Sem login, sem instalar pacote.</p>
+            <p class="leading-relaxed">Solução: injetar senha diretamente no disco com a VM parada:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code>qm stop 999
+apt install -y libguestfs-tools  # no Proxmox host
+virt-customize -a /dev/pve/vm-999-disk-0 --root-password password:suasenha
+qm start 999</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">4. Configurar rede manualmente</p>
+            <p class="leading-relaxed">Logado via console, a interface <code>ens18</code> não tinha IP. O cloud-init rodou sem datasource de rede então não criou o arquivo de configuração da interface. Fiz manualmente o que ele faria:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code>cat > /etc/systemd/network/10-ens18.network &lt;&lt; 'EOF'
+[Match]
+Name=ens18
+
+[Network]
+DHCP=yes
+EOF
+systemctl restart systemd-networkd</code></pre>
+            </div>
+            <p class="leading-relaxed">Alguns segundos depois: <code>10.10.10.103</code> via DHCP.</p>
+
+            <p class="leading-relaxed font-bold">5. Habilitar o guest agent no Proxmox e instalar:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code># no Proxmox host
+qm set 999 --agent enabled=1
+
+# dentro da VM
+apt update && apt install -y qemu-guest-agent
+systemctl start qemu-guest-agent</code></pre>
+            </div>
+
+            <p class="leading-relaxed font-bold">6. Limpar e converter pra template:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-emerald-400"><code># dentro da VM
+rm /etc/systemd/network/10-ens18.network
+cloud-init clean
+poweroff
+
+# no Proxmox host
+qm destroy 9000
+qm clone 999 9000 --name "debian-13-template" --full
+qm template 9000
+qm destroy 999</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Apply final</h3>
+            <p class="leading-relaxed">Com o template correto, o apply final funcionou sem warnings:</p>
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-2 mb-4">
+<pre class="text-sm text-zinc-400"><code>proxmox_virtual_environment_container.monitoring: Creation complete after 10s [id=120]
+proxmox_virtual_environment_vm.storage_server: Creation complete after 26s [id=110]
+proxmox_virtual_environment_vm.k3s_node: Creation complete after 27s [id=100]
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+ip_k3s_server        = "10.10.10.104"
+ip_storage_server    = "10.10.10.105"
+ip_monitoring_server = "dhcp"</code></pre>
+            </div>
+            <img src="../assets/images-proxmox-terraform/apply-final-ok.png" alt="Apply Final OK" class="rounded border border-zinc-800 my-4 max-w-full">
+            <p class="leading-relaxed">Três máquinas rodando, IPs visíveis, pipeline completa funcionando.</p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 O que ficou de aprendizado</h3>
+                <p class="leading-relaxed text-zinc-300"><strong>Sobre providers</strong>: versão importa. O <code>telmate/proxmox</code> funcionava mas estava travado em compatibilidade com o Proxmox 9. Migrar pro <code>bpg/proxmox</code> foi a decisão certa e o código ficou mais limpo.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre cloud-init</strong>: o template cloud-init só configura a rede se tiver datasource. Sem os dados que o Proxmox injeta via cloud-init drive, ele roda mas não faz nada na rede. Importante saber isso quando precisar acessar uma VM clonada manualmente.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre RBAC</strong>: least privilege na teoria é simples, na prática você vai descobrindo o que falta à medida que os erros aparecem. <code>Sys.Audit</code>, <code>VM.GuestAgent.Audit</code>, <code>VM.GuestAgent.Unrestricted</code> não estavam em nenhum tutorial, todos apareceram no log.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre HCP Terraform com rede local</strong>: o agent é o caminho certo pra infraestrutura on-prem. Um container Docker pra configurar e você tem um runner dentro da sua rede sem abrir porta nenhuma.</p>
+                <p class="leading-relaxed text-zinc-300 mt-4">O próximo passo é o Ansible: pegar os IPs que o Terraform gerou, colocar no inventory e rodar os playbooks pra configurar cada VM do zero: k3s, NFS, Tailscale, Prometheus, Grafana, Loki.</p>
+                <p class="leading-relaxed text-zinc-300 mt-4">O código tá no <a href="https://github.com/luisbrancher/homelab-infra" class="text-emerald-400 hover:underline" target="_blank">homelab-infra</a>.</p>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+</body>
+</html>
