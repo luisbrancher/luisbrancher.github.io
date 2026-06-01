@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesigning my homelab #06: Ansible, VMs, and everything that broke along the way | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Terraform had done its job. The next step was Ansible, taking these raw VMs and transforming them into configured infrastructure.">
+    <meta property="og:title" content="Redesigning my homelab #06: Ansible, VMs, and everything that broke along the way | DevOps Portfolio">
+    <meta property="og:description" content="Terraform had done its job. The next step was Ansible, taking these raw VMs and transforming them into configured infrastructure.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-novo-homelab-06-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-06-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-06.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-06-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-novo-homelab-06.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+    
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-novo-homelab-06.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Post Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+        
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Post Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-05-31">May 31, 2026</time>
+                <span>•</span>
+                <span>8 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Redesigning my homelab #06: Ansible, VMs, and everything that broke along the way
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">K3S</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TROUBLESHOOTING</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">PROXMOX</span>
+            </div>
+            <div class="mt-6">
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> View repository on GitHub
+                </a>
+            </div>
+        </header>
+
+        <!-- Post Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+            <p class="leading-relaxed"><a href="post-proxmox-terraform-en.html" class="text-emerald-400 hover:underline">Terraform had done its job</a>: three machines running on Proxmox, IPs allocated, SSH key injected. The next step was Ansible, which takes these raw VMs and transforms them into configured infrastructure: k3s running, NFS exporting volumes, PLG stack up, Pi4 with network services.</p>
+
+            <p class="leading-relaxed">The code had been written since the trip. I knew there would be adjustments, but the idea was simple: run it, see what breaks, fix it, document it. Spoiler: quite a few things broke. Not for lack of planning, but because there is a real difference between writing code without hardware in front of you and running it in production.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Before running any playbook</h2>
+            <p class="leading-relaxed">Two problems appeared right at the beginning, before any ansible-playbook.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The ansible.cfg being ignored</h3>
+            <p class="leading-relaxed">I ran the first ping to test connectivity and got the warning:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>[WARNING]: Ansible is being run in a world writable directory, ignoring it as an ansible.cfg source</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The project is located in <code>/mnt/w/</code> which is the Windows filesystem mounted on WSL. Ansible rejects the <code>ansible.cfg</code> from world-writable directories for security. The simplest way was to export the environment variable for each session:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>export ANSIBLE_CONFIG=/mnt/w/VSCode/homelab-infra/ansible/ansible.cfg</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Different users per machine type</h3>
+            <p class="leading-relaxed">I had put <code>ansible_user: debian</code> in <code>vars.yml</code>. It works for VMs, where cloud-init creates the <code>debian</code> user. But Proxmox LXC doesn't go through cloud-init the same way, so it only comes with <code>root</code>. Moving the user to <code>inventory.ini</code> per host solves it:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>k3s-node        ansible_host=10.10.10.11 ansible_user=debian
+storage-server  ansible_host=10.10.10.12 ansible_user=debian
+lxc-monitoring  ansible_host=10.10.10.13 ansible_user=root</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">With that, <code>ansible all -m ping</code> returned green on all three machines.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> storage-server</h2>
+            <p class="leading-relaxed">First VM. The logic of running it in order makes sense because the k3s-node will mount NFS volumes that need to be exported beforehand.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">btrfs instead of ext4</h3>
+            <p class="leading-relaxed">When I created the disk manually in Proxmox, I chose btrfs: native snapshots per subvolume, transparent compression with zstd, and checksumming against silent corruption. It makes a difference for a disk that will store Immich photos and Nextcloud files. The playbook reflected ext4. I fixed it:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Create btrfs filesystem on storage device
+  community.general.filesystem:
+    fstype: btrfs
+    dev: "{{ storage_device }}"
+    opts: "-L data-sata"
+    force: false
+
+- name: Get UUID of storage device
+  ansible.builtin.command:
+    cmd: blkid -s UUID -o value {{ storage_device }}
+  register: storage_uuid
+  changed_when: false
+
+- name: Mount storage with btrfs options via fstab
+  ansible.builtin.mount:
+    path: "{{ storage_mount }}"
+    src: "UUID={{ storage_uuid.stdout }}"
+    fstype: btrfs
+    opts: defaults,compress=zstd,noatime
+    state: mounted</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The <code>force: false</code> ensures it won't reformat if a filesystem already exists. Mounting using UUID instead of the device path (<code>/dev/sdb</code>) avoids issues if the disk detection order changes between reboots.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The right disk</h3>
+            <p class="leading-relaxed">First execution error: the playbook tried to format <code>/dev/sda</code> and <code>mkfs.btrfs</code> returned "device or resource busy". <code>/dev/sda</code> was the OS disk. The data disk was <code>/dev/sdb</code>. Inside Proxmox the disk appears one way, inside the VM the order can be different. Always double-check with <code>lsblk</code> inside the machine before pointing to any device in code.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Missing btrfs-progs</h3>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>Failed to find required executable "mkfs.btrfs" in paths</code></pre>
+            </div>
+            
+            <p class="leading-relaxed"><code>mkfs.btrfs</code> comes from the <code>btrfs-progs</code> package which was not in the playbook's installation list. I added it along with <code>nfs-kernel-server</code>:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Install NFS package
+  ansible.builtin.apt:
+    name:
+      - nfs-kernel-server
+      - nfs-common
+      - btrfs-progs
+    state: present</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">With these tweaks, the playbook ran clean, the NFS reload handler fired at the end, and the exports showed up in <code>showmount -e localhost</code>.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> k3s-node</h2>
+            <p class="leading-relaxed">Here the code was mostly correct, but I ran into an issue with ArgoCD.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The CRD is too large</h3>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>The CustomResourceDefinition "applicationsets.argoproj.io" is invalid:
+metadata.annotations: Too long: may not be more than 262144 bytes</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">It's a known ArgoCD bug with conventional <code>kubectl apply</code>. The CRD exceeds the annotation size limit. The <code>--server-side</code> flag uses server-side apply and bypasses this:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Install ArgoCD
+  ansible.builtin.command:
+    cmd: kubectl apply -n argocd --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">With this, the 7 ArgoCD pods came up without errors.</p>
+
+            <img src="../assets/images-proxmox-ansible/argoCD-ok.png" alt="ArgoCD running without errors" class="rounded border border-zinc-800 my-6 max-w-full">
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> lxc-monitoring</h2>
+            <p class="leading-relaxed">This one was the most work. Not because of the complexity of what runs on it, but because LXC has restrictions that VMs don't.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">apt-key deprecated in Debian 13</h3>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>Failed to find required executable "apt-key" in paths</code></pre>
+            </div>
+            
+            <p class="leading-relaxed"><code>apt-key</code> was removed starting with Debian 12. The current way is to save the key in <code>/etc/apt/keyrings/</code> and reference it via <code>signed-by</code> in sources.list. The <code>apt_repository</code> Ansible module still tries to use <code>apt-key</code> internally, so the workaround was to use <code>copy</code> directly:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Add GPG key for Grafana
+  ansible.builtin.get_url:
+    url: https://apt.grafana.com/gpg.key
+    dest: /etc/apt/keyrings/grafana.asc
+    mode: '0644'
+
+- name: Add Grafana repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/grafana.list
+    content: "deb [signed-by=/etc/apt/keyrings/grafana.asc] https://apt.grafana.com stable main\n"
+    mode: '0644'</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The same pattern was later applied to Docker on the Pi4.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Tailscale doesn't start automatically on LXC</h3>
+            <p class="leading-relaxed">On VMs, the Tailscale installer already enables and starts <code>tailscaled</code> via systemd. On LXC this doesn't happen automatically, because containers have kernel access restrictions. The service started, but immediately crashed. The fix was to ensure the correct order:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Ensure Tailscale is running and enabled on boot
+  ansible.builtin.service:
+    name: tailscaled
+    state: started
+    enabled: true
+
+- name: Connect to Tailscale with auth key
+  ansible.builtin.command:
+    cmd: tailscale up --authkey="{{ tailscale_auth_key }}"
+  register: tailscale_up
+  changed_when: tailscale_up.rc == 0</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">But it was still failing. The log revealed the real problem:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>getLocalBackend error: CreateTUN("tailscale0") failed;
+/dev/net/tun does not exist</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">Tailscale needs the TUN device to create the virtual network interface. In unprivileged LXC, this device is not available by default. I had to manually add it to the container config in Proxmox:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>echo "lxc.cgroup2.devices.allow: c 10:200 rwm" &gt;&gt; /etc/pve/lxc/120.conf
+echo "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file" &gt;&gt; /etc/pve/lxc/120.conf
+pct reboot 120</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The first line tells the kernel that the container can access the TUN device. The second mounts the host's <code>/dev/net/tun</code> inside the container. Without both together, it doesn't work.</p>
+            <p class="leading-relaxed"><code>keyctl</code> also had to be enabled manually via <code>pct set</code>, because Proxmox doesn't allow changing feature flags via API unless you are <code>root@pam</code>. I added both to <code>lxc_monitoring.tf</code> as documentation of the desired state, with a comment explaining that the in-place apply will fail with 403 and must be done manually the first time.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Loki 3.x with schema v13</h3>
+            <p class="leading-relaxed">The Loki config was written with v2.x in mind: <code>boltdb-shipper</code>, schema <code>v11</code>, <code>chunks_directory</code> field. The current version is 3.7.2 and changed quite a bit:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb           # was boltdb-shipper
+      object_store: filesystem
+      schema: v13           # was v11
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  tsdb_shipper:             # was boltdb_shipper
+    active_index_directory: /var/loki/index
+    cache_location: /var/loki/cache
+  filesystem:
+    directory: /var/loki/chunks   # was chunks_directory</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">Also, Loki 3.x requires a WAL directory for the ingester. Without it:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>creating WAL folder at "/wal": mkdir wal: permission denied</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">I added it to the config and the directory creation loop:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>ingester:
+  wal:
+    dir: /var/loki/wal</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Binary with wrong name</h3>
+            <p class="leading-relaxed"><code>unarchive</code> extracted the binary as <code>loki-linux-amd64</code> but the service calls <code>/usr/local/bin/loki</code>. A symlink solves it and is cleaner than renaming:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Create Loki symlink
+  ansible.builtin.file:
+    src: /usr/local/bin/loki-linux-amd64
+    dest: /usr/local/bin/loki
+    state: link</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">With all that, the three services came up: Grafana on <code>:3000</code>, Prometheus on <code>:9090</code>, Loki answering <code>ready</code> on <code>:3100</code> after about 15 seconds of ingester initialization.</p>
+
+            <img src="../assets/images-proxmox-ansible/lxc-sucess.png" alt="LXC Success" class="rounded border border-zinc-800 my-6 max-w-full">
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Pi4</h2>
+            <p class="leading-relaxed">The Pi4 was the most uncertain part. I installed Raspberry Pi OS Lite 64-bit based on Debian 13 Trixie, which is the current version. Configured the user, enabled SSH, and copied the public key with <code>ssh-copy-id</code>.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Omada and the MongoDB problem</h3>
+            <p class="leading-relaxed">The original playbook installed the Omada Controller directly via <code>.deb</code>. Omada depends on MongoDB, and MongoDB doesn't provide ARM64 binaries for Debian 13. I tested adding the repo manually, but the package simply doesn't exist for this architecture/distro combo.</p>
+            <p class="leading-relaxed">The first idea was to move Omada to an LXC on Proxmox. I created <code>lxc_omada</code> via Terraform, separated the <code>omada.yml</code> playbook, and ran it. The service came up, but the LXC with 2GB of RAM sat at 98% memory usage just with MongoDB and Omada. That's not a healthy setup for something that needs to be available 24/7.</p>
+            
+            <img src="../assets/images-proxmox-ansible/erro-mongodb.png" alt="MongoDB Error" class="rounded border border-zinc-800 my-6 max-w-full">
+
+            <p class="leading-relaxed">The solution was Docker. The <code>mbentley/omada-controller</code> image packages MongoDB and Java internally, without depending on anything from the host OS. I ran it on the Pi4 with a docker-compose managed by Ansible:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>services:
+  omada-controller:
+    image: mbentley/omada-controller:latest
+    container_name: omada-controller
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=America/Sao_Paulo
+      - MANAGE_HTTPS_PORT: 8043
+    volumes:
+      - /opt/omada/data:/opt/tplink/EAPController/data
+      - /opt/omada/logs:/opt/tplink/EAPController/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2048M
+        reservations:
+          memory: 512M</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The Pi4 with 8GB handles it well. I destroyed <code>lxc_omada</code> with <code>terraform destroy -target</code>, removed <code>lxc_omada.tf</code> and <code>omada.yml</code>, and moved Omada back to the Pi4 via Docker.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">UpSnap crashing due to missing $HOME</h3>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>neither $XDG_CONFIG_HOME nor $HOME are defined</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The UpSnap systemd service didn't have the <code>$HOME</code> variable defined. UpSnap uses PocketBase underneath, which needs to know where to create its config files. I added it to the service template:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>[Service]
+Environment=HOME=/root
+ExecStart=/usr/local/bin/upsnap serve --http=0.0.0.0:{{ upsnap_port }} --dir=/mnt/data/upsnap</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">NFS with root_squash blocking access</h3>
+            <p class="leading-relaxed">UpSnap comes up but couldn't create a file on the NFS mount:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>touch: cannot touch '/mnt/data/upsnap/test': Permission denied</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">NFS exports with <code>root_squash</code> by default, which converts the client's root to <code>nobody</code>. The Pi4 runs UpSnap as root, so writing is blocked. I fixed the export options in <code>vars.yml</code>:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>nfs_exports:
+  - path: /mnt/data/upsnap
+    clients: "{{ pi4_ip }}"
+    options: rw,sync,no_subtree_check,no_root_squash</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">I ran <code>storage-server.yml</code> again, the NFS reload handler fired, and UpSnap started writing to the volume without errors.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The Tailscale pattern that stayed</h2>
+            <p class="leading-relaxed">One thing I standardized across all playbooks during troubleshooting: the Tailscale order. The original block had <code>creates:</code> as an idempotency guard on <code>tailscale up</code>, but this broke silently. The state file is created when the daemon starts, not when it authenticates. So on the second run, Ansible skipped the command and the node remained unauthenticated.</p>
+            <p class="leading-relaxed">The pattern that stayed on all hosts:</p>
+            
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Download and run Tailscale installation script
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://tailscale.com/install.sh | sh
+    creates: /usr/bin/tailscale
+
+- name: Ensure Tailscale is running and enabled on boot
+  ansible.builtin.service:
+    name: tailscaled
+    state: started
+    enabled: true
+
+- name: Connect to Tailscale with auth key
+  ansible.builtin.command:
+    cmd: tailscale up --authkey="{{ tailscale_auth_key }}"
+  register: tailscale_up
+  changed_when: tailscale_up.rc == 0</code></pre>
+            </div>
+            
+            <p class="leading-relaxed">The <code>creates:</code> stays only on the script installation, not on <code>tailscale up</code>. Tailscale is idempotent by itself: if it's already authenticated with the same key, it does nothing.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Final result</h2>
+            <p class="leading-relaxed">Four configured machines, all services running:</p>
+            
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Machine</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Services</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>storage-server</code></td>
+                            <td class="p-3">NFS, Node Exporter, Tailscale</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>k3s-node</code></td>
+                            <td class="p-3">k3s, ArgoCD, Node Exporter, Tailscale</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>lxc-monitoring</code></td>
+                            <td class="p-3">Prometheus, Grafana, Loki, Node Exporter, Tailscale</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3"><code>Pi4</code></td>
+                            <td class="p-3">Omada (Docker), MotionEye, UpSnap, Node Exporter, Tailscale</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Grafana is accessible on <code>:3000</code>, Prometheus is scraping metrics, ArgoCD is waiting for the <code>homelab-gitops</code> repo to start deploying. That's the next step: connect ArgoCD and spin up Nextcloud, Immich, Jellyfin, and Traefik via GitOps.</p>
+            
+            <p class="leading-relaxed">The code is on <a href="https://github.com/luisbrancher/homelab-infra" class="text-emerald-400 hover:underline" target="_blank">homelab-infra</a>.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+</body>
+</html>
