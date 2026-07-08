@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redesigning my homelab #07: dedicated NAS, GitOps up and running, and the first experience with Kubernetes and ArgoCD | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Setting up a dedicated TrueNAS from scratch and running the first real deploy of homelab-gitops: ArgoCD, Nextcloud, Immich, and Jellyfin, with every error along the way.">
+    <meta property="og:title" content="Redesigning my homelab #07: dedicated NAS, GitOps live, and everything that broke along the way | DevOps Portfolio">
+    <meta property="og:description" content="Setting up a dedicated TrueNAS from scratch and running the first real deploy of homelab-gitops: ArgoCD, Nextcloud, Immich, and Jellyfin, with every error along the way.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-homelab-07-truenas-gitops-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-homelab-07-truenas-gitops-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-homelab-07-truenas-gitops.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-homelab-07-truenas-gitops-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-homelab-07-truenas-gitops.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-homelab-07-truenas-gitops.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Article Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Article Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-07-07">Jul 07, 2026</time>
+                <span>•</span>
+                <span>12 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Redesigning my homelab #07: dedicated NAS, GitOps up and running, and the first experience with Kubernetes and ArgoCD
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TRUENAS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ARGOCD</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">GITOPS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TROUBLESHOOTING</span>
+            </div>
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="https://github.com/luisbrancher/homelab-gitops" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-gitops
+                </a>
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-infra
+                </a>
+            </div>
+        </header>
+
+        <!-- Article Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+
+            <p class="leading-relaxed">I'd known for a while that the homelab's storage needed a better solution. I had a <code>storage-server</code> VM running inside Proxmox itself, with a SATA disk passed through, exporting NFS to the other services. It worked, but it was a hack: storage running on the same hardware as the cluster, eating CPU and RAM, the only redundancy was a backup on an external HD, and no decent interface to manage it.</p>
+
+            <p class="leading-relaxed">The solution came in the form of a Lenovo V50s I found cheap on a local marketplace: i3-10100, 8GB RAM, a free PCIe slot. It became the dedicated NAS. And with the new NAS configured, I finally had the right environment to run the first real deploy of <code>homelab-gitops</code>, the repo I'd been building for a few months that had never actually run on a cluster.</p>
+
+            <p class="leading-relaxed">This post covers both fronts: setting up TrueNAS from scratch on the V50s, and running the first ArgoCD deploy with Nextcloud, Immich, and Jellyfin. With every error along the way.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The NAS hardware</h2>
+            <p class="leading-relaxed">The plan was to fit four disks: two 1TB SSDs for active data and two 1TB HDDs for backup. I bought a PCIe SATA card (ASM1166) to get enough ports, and a 2.5GbE network card I already had lying around for more NFS bandwidth.</p>
+
+            <p class="leading-relaxed">The first problem showed up right here: the two PCIe cards together didn't work. The system recognized one or the other, never both at the same time. A PCIe bus limitation on the V50s. I had to choose: the SATA card stayed, the 2.5GbE went. For now the NAS runs on the onboard 1GbE NIC, to be solved later with an M.2 network adapter.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> TrueNAS 25.10</h2>
+            <p class="leading-relaxed">I installed TrueNAS 25.10 on the V50s's dedicated M.2. The install itself isn't much of a mystery, but there are a few BIOS details that matter:</p>
+
+            <ul class="list-disc list-inside space-y-2 pl-2">
+                <li><strong class="text-zinc-300">Secure Boot</strong>: disabled, TrueNAS won't boot with it on</li>
+                <li><strong class="text-zinc-300">Wake on LAN</strong>: enabled, useful for powering the NAS on remotely</li>
+                <li><strong class="text-zinc-300">Power on after AC loss</strong>: enabled as Power ON, so the NAS comes back on its own after a power cut</li>
+            </ul>
+
+            <p class="leading-relaxed">After the initial boot I set the static IP <code>10.10.10.15</code> and enabled SSH. One thing I learned quickly: TrueNAS's root filesystem is read-only. You can't install software via a shell script. Tailscale, for instance, had to be installed via <strong class="text-zinc-300">Apps → Discover → Tailscale</strong> in the UI, not the <code>curl | sh</code> I use in Ansible.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Pools and datasets</h3>
+            <p class="leading-relaxed">I created two ZFS stripe pools: <code>data-ssd</code> with the two SSDs, and <code>backup-hdd</code> with the two HDDs. Stripe with no redundancy: if one disk fails, the whole pool is gone. I know the risk and I'm accepting it consciously because I have automatic replication between the pools.</p>
+
+            <p class="leading-relaxed">Inside <code>data-ssd</code> I created one dataset per service: <code>nextcloud</code>, <code>immich</code>, <code>jellyfin</code>. Each became an NFS share. I also set up a 24h Periodic Snapshot Task with a two-week retention, plus a Replication Task that copies everything from <code>data-ssd</code> to <code>backup-hdd</code> automatically after each snapshot.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Changes in homelab-infra</h3>
+            <p class="leading-relaxed">With the new NAS, <code>storage-server</code> stopped existing. I removed the VM from Terraform (<code>terraform state rm</code> before deleting the code), took it out of the Ansible inventory, and updated the variables that pointed to the old paths. <code>nfs_server</code> in <code>vars.yml</code> now points to TrueNAS instead of the VM.</p>
+
+            <p class="leading-relaxed">Two bugs showed up in the services that depended on the old NFS. MotionEye on the Pi4 stopped starting after reboot because the <code>/run/motioneye</code> directory is ephemeral and disappeared. Fix: add <code>RuntimeDirectory=motioneye</code> to the systemd service via Ansible. UpSnap complained about permissions on the NFS mount because NFS exports with <code>root_squash</code> by default, mapping the client's root to <code>nobody</code>. Fix: <code>chmod 777</code> on the dataset from TrueNAS as root, and <code>no_root_squash</code> in the export options.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> First homelab-gitops deploy</h2>
+            <p class="leading-relaxed">With the NAS up and the paths updated in <code>homelab-gitops</code>, it was time to actually run what I'd been writing over the past few months. The README sequence looked simple, but in practice it took several hours of debugging.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The first two steps</h3>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl apply -f bootstrap/namespaces.yml
+kubectl apply -f bootstrap/argocd-app-of-apps.yml</code></pre>
+            </div>
+
+            <p class="leading-relaxed">This part was smooth. The namespaces were created, the App of Apps registered, and ArgoCD started pulling the <code>Application</code> objects from the <code>apps/</code> directory. Within seconds all five apps showed up on the watch: <code>cert-manager</code>, <code>cnpg-operator</code>, <code>nextcloud</code>, <code>immich</code>, <code>jellyfin</code>. All <code>Progressing</code>.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">cnpg-operator stuck OutOfSync</h3>
+            <p class="leading-relaxed">The first problem was <code>cnpg-operator</code> getting stuck in <code>OutOfSync</code> after a few minutes. The error from <code>kubectl describe</code>:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>CustomResourceDefinition "clusters.postgresql.cnpg.io" is invalid:
+metadata.annotations: Too long: may not be more than 262144 bytes</code></pre>
+            </div>
+
+            <p class="leading-relaxed">CNPG's CRDs are too large to fit in the <code>last-applied-configuration</code> annotation that kubectl uses by default — a known issue I found while researching. The fix is adding <code>ServerSideApply=true</code> to the syncOptions in <code>apps/cnpg-operator.yml</code> and syncing through the ArgoCD UI (Sync → Server-Side Apply, without checking Force, since <code>--force</code> and <code>--server-side</code> are mutually exclusive). After a few minutes the operator came up as <code>Synced/Healthy</code>.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">PVCs that wouldn't bind</h3>
+            <p class="leading-relaxed">With the namespaces created, I applied the PVCs:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl apply -f charts/nextcloud/pvc.yml
+kubectl apply -f charts/immich/pvc.yml
+kubectl apply -f charts/jellyfin/pvc.yml</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Two stayed <code>Pending</code>. <code>immich-pvc</code> requested 200Gi but the PV had 100Gi declared. Kubernetes won't bind when the PVC asks for more than the PV offers. Simple fix: correct the PVC to 100Gi.</p>
+
+            <p class="leading-relaxed"><code>jellyfin-media-pvc</code> was missing <code>storageClassName: ""</code> in the manifest, so it inherited the cluster's default StorageClass (<code>local-path</code>) instead of binding to the PV, which had an explicit empty field. Fix: add the field to the PVC.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The death of the Bitnami images</h3>
+            <p class="leading-relaxed">Nextcloud's Helm chart uses a Bitnami PostgreSQL subchart. The problem: the <code>bitnami/postgresql</code> images with named tags like <code>16-debian-12</code> no longer exist on Docker Hub. Bitnami moved to a paid image model. The cluster sat in <code>ImagePullBackOff</code> with no way out.</p>
+
+            <p class="leading-relaxed">The fix was moving Nextcloud's database to CNPG too, same as Immich. I created a <code>charts/nextcloud/postgres-cluster.yml</code> with a CNPG Cluster, disabled the Bitnami subchart in <code>values.yml</code>, and enabled <code>externalDatabase</code> pointing to the CNPG service.</p>
+
+            <p class="leading-relaxed">But the Nextcloud chart always generates an init container that tries to resolve the host <code>nextcloud-postgresql</code> before starting, regardless of whether you've enabled an external database or not. The fix was creating an <code>ExternalName</code> Service that redirects that name to CNPG:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-postgresql
+  namespace: nextcloud
+spec:
+  type: ExternalName
+  externalName: nextcloud-postgres-rw.nextcloud.svc.cluster.local</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Immich's Postgres image incompatible with CNPG</h3>
+            <p class="leading-relaxed">The Immich <code>postgres-cluster.yml</code> was using <code>ghcr.io/immich-app/postgres:17-vectorchord0.4.3-pgvectors0.4.0</code>. Two problems: the tag no longer existed, and Immich's image doesn't have the UID 26 that the CNPG operator requires to bootstrap the database.</p>
+
+            <p class="leading-relaxed">The fix was switching to the <code>ghcr.io/tensorchord/cloudnative-vectorchord:17-0.3.0</code> image, which is built specifically to run with CNPG and already has the correct UIDs and the vectorchord extensions available.</p>
+
+            <p class="leading-relaxed">Even with the right image, the extensions still had to be created manually as superuser after the database came up, since the <code>immich</code> user doesn't have permission to do that:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl exec -it immich-postgres-1 -n immich -- psql -U postgres -d immich -c "CREATE EXTENSION IF NOT EXISTS vchord CASCADE;"
+kubectl exec -it immich-postgres-1 -n immich -- psql -U postgres -d immich -c "CREATE EXTENSION IF NOT EXISTS cube CASCADE;"
+kubectl exec -it immich-postgres-1 -n immich -- psql -U postgres -d immich -c "CREATE EXTENSION IF NOT EXISTS earthdistance CASCADE;"</code></pre>
+            </div>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">NFS root_squash blocking everything</h3>
+            <p class="leading-relaxed">Immich came up, connected to the database, ran the migrations, and then:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>Failed to create /data/encoded-video/.immich: Error: EACCES: permission denied</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Jellyfin:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>Access to the path '/config/log' is denied.</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Same issue as UpSnap on the Pi4. TrueNAS exports NFS with <code>root_squash</code> enabled by default, which maps UID 0 to <code>nobody</code>. The pods ran as root, TrueNAS blocked the write. Fix: on each service's NFS share in TrueNAS, set <strong class="text-zinc-300">Maproot User: root</strong> and <strong class="text-zinc-300">Maproot Group: root</strong>. After that, a pod restart and everything wrote normally.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">The bjw-s common library and the ignored env vars</h3>
+            <p class="leading-relaxed">Immich's chart uses the <code>bjw-s common library</code>. I had the environment variables at the root level of <code>values.yml</code>:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>env:
+  DB_HOSTNAME: immich-postgres-rw</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Those variables were simply ignored. The server started up trying to connect to a host called <code>database</code>, the hardcoded default. The correct structure for bjw-s is:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>controllers:
+  main:
+    containers:
+      main:
+        env:
+          DB_HOSTNAME: immich-postgres-rw</code></pre>
+            </div>
+
+            <p class="leading-relaxed">After that change the server connected to the database for the first time.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Nextcloud killed by the liveness probe</h3>
+            <p class="leading-relaxed">On first startup, Nextcloud needs to create all its database tables. That takes longer than the liveness probe's default. Kubernetes was killing the container before it finished initializing, the pod went into <code>CrashLoopBackOff</code>, and it never managed to finish setup.</p>
+
+            <p class="leading-relaxed">Fix: increase <code>initialDelaySeconds</code> to 120 and <code>failureThreshold</code> to 10 on Nextcloud's probes. On the next attempt the container came up and Nextcloud initialized correctly.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> TLS and DNS</h2>
+            <p class="leading-relaxed">With all services <code>Healthy</code>, external access was still missing. cert-manager's <code>ClusterIssuer</code> was created, but the challenges stayed stuck in <code>pending</code> for hours. The reason: I created the <code>ClusterIssuer</code> before creating the <code>cloudflare-api-token</code> secret. cert-manager couldn't authenticate with Cloudflare to create the validation TXT record.</p>
+
+            <p class="leading-relaxed">Fix: create the secret and delete the old challenges to force re-issuance:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>kubectl delete challenge -n nextcloud nextcloud-tls-1-...
+kubectl delete challenge -n immich immich-tls-1-...
+kubectl delete challenge -n jellyfin jellyfin-tls-1-...</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Within a few minutes all three certificates turned <code>Ready: True</code>.</p>
+
+            <p class="leading-relaxed">For DNS, I created A records on Cloudflare pointing to the k3s-node's Tailscale IP, all with the proxy disabled (DNS only). The Tailscale IP isn't publicly routable, so in practice only someone on my Tailscale network can actually reach it, even though the name resolves for anyone who queries the DNS.</p>
+
+            <p class="leading-relaxed">The last detail was Tailscale's MagicDNS intercepting the DNS queries. Enabling <strong class="text-zinc-300">Override DNS servers</strong> in the Tailscale admin panel with Cloudflare as the global nameserver made the problem disappear, and all three domains started resolving correctly.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Final state</h2>
+
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">App</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Status</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Address</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>cert-manager</code></td>
+                            <td class="p-3">Synced / Healthy</td>
+                            <td class="p-3 text-zinc-600">—</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>cnpg-operator</code></td>
+                            <td class="p-3">Synced / Healthy</td>
+                            <td class="p-3 text-zinc-600">—</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>nextcloud</code></td>
+                            <td class="p-3">Synced / Healthy</td>
+                            <td class="p-3">nextcloud.homelab.luisbrancher.dev</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3"><code>immich</code></td>
+                            <td class="p-3">Synced / Healthy</td>
+                            <td class="p-3">immich.homelab.luisbrancher.dev</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3"><code>jellyfin</code></td>
+                            <td class="p-3">Synced / Healthy</td>
+                            <td class="p-3">jellyfin.homelab.luisbrancher.dev</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">TLS issued via Let's Encrypt for all three. Access via Tailscale from any device on my network.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What's still pending</h2>
+            <p class="leading-relaxed">Not everything wrapped up in this session. <code>immich-nextcloud-photos-pvc</code> is created and bound, but not yet mounted in the Immich pod. Still need to add <code>extraVolumes</code> and <code>extraVolumeMounts</code> to <code>values.yml</code> and configure the path as an External Library in the UI. Jellyfin is also up but with no content: the media files need to be uploaded via SFTP to <code>/mnt/media</code> on the k3s-node, which is where the <code>hostPath</code> PVC points.</p>
+
+            <p class="leading-relaxed">Those are the next steps. For now, what matters is going from zero to everything healthy on a real cluster, with dedicated storage, automatic TLS, and GitOps working. Any config change from here is a git push.</p>
+
+            <p class="leading-relaxed">The code is on <a href="https://github.com/luisbrancher/homelab-gitops" class="text-emerald-400 hover:underline" target="_blank">homelab-gitops</a> and the infrastructure on <a href="https://github.com/luisbrancher/homelab-infra" class="text-emerald-400 hover:underline" target="_blank">homelab-infra</a>.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+</body>
+</html>
