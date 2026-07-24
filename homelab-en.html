@@ -7,7 +7,7 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Topology and architecture of my Homelab. Overview of my physical and logical self-hosted infrastructure with Proxmox, k3s, and Docker.">
+    <meta name="description" content="Topology and architecture of my Homelab. Overview of my physical and logical self-hosted infrastructure with Proxmox, k3s, ArgoCD, and TrueNAS.">
     <meta property="og:title" content="Homelab | DevOps Portfolio">
     <meta property="og:description" content="Topology and architecture of my Homelab. Overview of my physical and logical self-hosted infrastructure.">
     <meta property="og:type" content="website">
@@ -74,9 +74,9 @@
                 <li><a href="homelab-en.html" class="text-emerald-400 transition-colors">~/homelab</a></li>
                 <li><a href="blog-en.html" class="hover:text-emerald-400 transition-colors">~/blog</a></li>
                 <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
-                    <a href="homelab.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
                     <span class="text-zinc-700">|</span>
-                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                    <a href="homelab.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
                 </li>
             </ul>
         </div>
@@ -89,25 +89,28 @@
             <h1 class="text-3xl font-bold text-zinc-200 mb-4 tracking-tight">
                 > ./<span class="text-emerald-500">network_map.sh</span><span class="animate-blink">_</span>
             </h1>
-            <p class="text-zinc-500">Overview of my physical and logical self-hosted infrastructure.</p>
-        </div>
+                <p class="text-zinc-500">Overview of my physical and logical self-hosted infrastructure.</p>
+            </div>
 
         <!-- Topology Diagram (ASCII) -->
         <section class="mb-12">
             <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
                 <span class="text-emerald-500">#</span> physical_topology
             </h2>
-
             <div class="p-6 bg-zinc-900/30 border border-zinc-800 rounded overflow-x-auto">
 <pre class="font-mono text-sm md:text-base text-zinc-400 leading-relaxed">
 🌐 <span class="text-blue-400 font-bold">WAN</span> (Internet)
 └── 🖧 <span class="text-zinc-200">ISP Modem</span> <span class="text-xs text-zinc-500">[Bridge Mode]</span>
-    └── 🛡️ <span class="text-emerald-400 font-bold">OPNsense Firewall</span> <span class="text-xs text-zinc-500">[MiniPC N150]</span>
-        └── 🔀 <span class="text-zinc-200">Switch 2.5GbE</span>
-            ├── 🖥️ <span class="text-blue-400 font-bold">Server Node</span> <span class="text-xs text-zinc-500">[Intel i5-1345u]</span>
-            │    └── 🐳 <span class="text-zinc-500">Docker Services</span>
-            ├── 💻 <span class="text-zinc-200">Workstation PC</span> <span class="text-xs text-zinc-500">[Ryzen 9 5900xt]</span>
-            └── 📶 <span class="text-zinc-200">Omada WiFi 6</span> <span class="text-xs text-zinc-500">[Access Point]</span>
+    └── 🛡️ <span class="text-emerald-400 font-bold">OPNsense Firewall</span> <span class="text-xs text-zinc-500">[MiniPC N150, 4 NICs]</span> <span class="text-xs text-zinc-600">⟷ Tailscale VPN</span>
+        └── 🔀 <span class="text-zinc-200">Switch</span> <span class="text-xs text-zinc-500">[2.5GbE]</span>
+            ├── 🖥️ <span class="text-blue-400 font-bold">Proxmox Host</span> <span class="text-xs text-zinc-500">[Intel i5-13500T]</span>
+            │    ├── 💠 <span class="text-zinc-300">VM k3s-node</span> <span class="text-xs text-zinc-500">→ k3s + ArgoCD (GitOps)</span>
+            │    └── 📦 <span class="text-zinc-300">LXC lxc-monitoring</span> <span class="text-xs text-zinc-500">→ Prometheus + Grafana + Loki</span>
+            ├── 🗄️ <span class="text-zinc-200">NAS</span> <span class="text-xs text-zinc-500">[TrueNAS, Lenovo V50s i3-10100]</span>
+            ├── 🍓 <span class="text-zinc-200">Raspberry Pi 4</span> <span class="text-xs text-zinc-500">→ Omada Controller · MotionEye · UpSnap</span>
+            ├── 📶 <span class="text-zinc-200">Omada WiFi 6</span> <span class="text-xs text-zinc-500">[Access Point]</span>
+            ├── 📶 <span class="text-zinc-200">Cudy TR3000</span> <span class="text-xs text-zinc-500">[OpenWrt, AP, travel router]</span>
+            └── 💻 <span class="text-zinc-200">Workstation PC</span> <span class="text-xs text-zinc-500">[trusted, wired]</span>
 </pre>
             </div>
         </section>
@@ -118,25 +121,25 @@
                 <span class="text-emerald-500">#</span> vlan_segmentation
             </h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- VLAN Official -->
+                <!-- VLAN Trusted -->
                 <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-emerald-500">
-                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-emerald-500">Official</span></div>
-                    <p class="text-xs text-zinc-500">Trusted devices, main workstation, and core servers.</p>
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-emerald-500">trusted</span> <span class="text-xs text-zinc-600 font-normal">ID 10 · 10.10.10.0/24</span></div>
+                    <p class="text-xs text-zinc-500">Unrestricted access. Proxmox, NAS, Pi4, switch and workstation.</p>
                 </div>
                 <!-- VLAN IoT -->
                 <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-blue-500">
-                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-blue-500">IoT</span></div>
-                    <p class="text-xs text-zinc-500">Smart devices, TVs, and isolated gadgets with no local access.</p>
-                </div>
-                <!-- VLAN Labs -->
-                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-amber-500">
-                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-amber-500">Labs</span></div>
-                    <p class="text-xs text-zinc-500">Testing environment for malware analysis and service breaking.</p>
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-blue-500">iot</span> <span class="text-xs text-zinc-600 font-normal">ID 20 · 10.10.20.0/24</span></div>
+                    <p class="text-xs text-zinc-500">Internet only. Smart devices and TVs isolated from the local network.</p>
                 </div>
                 <!-- VLAN Guest -->
                 <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-purple-500">
-                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-purple-500">Guest</span></div>
-                    <p class="text-xs text-zinc-500">Network for visitors with full isolation from the internal network and internet-only access.</p>
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-purple-500">guest</span> <span class="text-xs text-zinc-600 font-normal">ID 30 · 10.10.30.0/24</span></div>
+                    <p class="text-xs text-zinc-500">Internet only. Network for visitors, total isolation.</p>
+                </div>
+                <!-- VLAN Lab -->
+                <div class="p-4 border border-zinc-800 bg-zinc-900/30 rounded border-t-2 border-t-amber-500">
+                    <div class="text-lg font-bold text-zinc-200 mb-1">VLAN <span class="text-amber-500">lab</span> <span class="text-xs text-zinc-600 font-normal">ID 40 · 10.10.40.0/24</span></div>
+                    <p class="text-xs text-zinc-500">Internet + trusted. Test bench (e.g., Cudy AP on OpenWrt).</p>
                 </div>
             </div>
         </section>
@@ -144,7 +147,7 @@
         <!-- Docker Services -->
         <section>
             <h2 class="text-xl font-semibold text-zinc-200 mb-4 flex items-center gap-2">
-                <span class="text-emerald-500">></span> docker ps -a
+                <span class="text-emerald-500">></span> kubectl get pods -A <span class="text-zinc-600 text-sm font-normal">&& docker ps</span> <span class="text-xs text-zinc-600 font-normal">[Pi4]</span>
             </h2>
             <div class="border border-zinc-800 bg-zinc-900/30 rounded overflow-x-auto">
                 <table class="w-full text-left border-collapse text-sm">
@@ -157,44 +160,65 @@
                     </thead>
                     <tbody class="text-zinc-300">
                         <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                            <td class="p-4 text-emerald-400 font-bold">wazuh-manager</td>
+                            <td class="p-4 text-emerald-400 font-bold">nextcloud</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Synced</span></td>
+                            <td class="p-4 text-zinc-500">File Sync (k3s)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">immich</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Synced</span></td>
+                            <td class="p-4 text-zinc-500">Photo Backup (k3s)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">jellyfin</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Synced</span></td>
+                            <td class="p-4 text-zinc-500">Media Server (k3s)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">cert-manager</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Synced</span></td>
+                            <td class="p-4 text-zinc-500">TLS / Let's Encrypt (k3s)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">cnpg-operator</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Synced</span></td>
+                            <td class="p-4 text-zinc-500">PostgreSQL Operator (k3s)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">prometheus</td>
                             <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Security / SIEM</td>
+                            <td class="p-4 text-zinc-500">Metrics (LXC)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">grafana</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Dashboards (LXC)</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
+                            <td class="p-4 text-emerald-400 font-bold">loki</td>
+                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
+                            <td class="p-4 text-zinc-500">Log Aggregation (LXC)</td>
                         </tr>
                         <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
                             <td class="p-4 text-emerald-400 font-bold">omada-controller</td>
                             <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Network Mgmt</td>
-                        </tr>
-                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                            <td class="p-4 text-emerald-400 font-bold">portainer</td>
-                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Infrastructure UI</td>
-                        </tr>
-                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                            <td class="p-4 text-emerald-400 font-bold">immich</td>
-                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Photo Backup</td>
+                            <td class="p-4 text-zinc-500">Network Mgmt (Pi4)</td>
                         </tr>
                         <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
                             <td class="p-4 text-emerald-400 font-bold">motioneye</td>
                             <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">NVR / CCTV</td>
-                        </tr>
-                        <tr class="border-b border-zinc-800/50 hover:bg-zinc-800/20 transition-colors">
-                            <td class="p-4 text-emerald-400 font-bold">jellyfin</td>
-                            <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Media Server</td>
+                            <td class="p-4 text-zinc-500">NVR / CCTV (Pi4)</td>
                         </tr>
                         <tr class="hover:bg-zinc-800/20 transition-colors">
                             <td class="p-4 text-emerald-400 font-bold">upsnap</td>
                             <td class="p-4"><span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]"></span> Up</span></td>
-                            <td class="p-4 text-zinc-500">Wake-on-LAN</td>
+                            <td class="p-4 text-zinc-500">Wake-on-LAN (Pi4)</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
+
 
         <!-- Full Diagram -->
         <section class="mt-12">
