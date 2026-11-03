@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Four months running: what I changed by hand and what a review found | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="After four months of using my homelab, I took stock of what I'd changed by hand and asked for a review of all three repos before starting on observability: databases with no backup, firewall gaps, and risky playbooks.">
+    <meta property="og:title" content="Four months running: what I changed by hand and what a review found | DevOps Portfolio">
+    <meta property="og:description" content="After four months of using my homelab, I took stock of what I'd changed by hand and asked for a review of all three repos before starting on observability: databases with no backup, firewall gaps, and risky playbooks.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-revisando-homelab-en.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-en.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+
+    <!-- Navigation -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index-en.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index-en.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv-en.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes-en.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab-en.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog-en.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <a href="post-revisando-homelab.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇧🇷 PT</a>
+                    <span class="text-zinc-700">|</span>
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇺🇸 EN</span>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Article Content -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+
+        <!-- Back Button -->
+        <a href="../blog-en.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Article Header -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-11-02">Nov 02, 2026</time>
+                <span>•</span>
+                <span>5 min read</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                Four months running: what I changed by hand and what a review found
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">REVIEW</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">BACKUP</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">OBSERVABILITY</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TERRAFORM</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+            </div>
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="https://github.com/luisbrancher/homelab-network" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-network
+                </a>
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-infra
+                </a>
+                <a href="https://github.com/luisbrancher/homelab-gitops" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-gitops
+                </a>
+            </div>
+        </header>
+
+        <!-- Article Body -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+
+            <p class="leading-relaxed">The last post in the <a href="post-homelab-07-truenas-gitops-en.html" class="text-emerald-400 hover:underline">Redesigning my homelab</a> series ended in late June, with the new NAS and the first real deploy of <code>homelab-gitops</code>: Nextcloud, Immich, and Jellyfin up and running, managed by ArgoCD. From there I stopped building and started using it.</p>
+
+            <p class="leading-relaxed">Using it is a different thing. Over four months, what was in the code and what was actually running drifted apart a little, always for a good reason at the time.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What changed by hand</h2>
+            <p class="leading-relaxed">The most annoying problem was the Proxmox host's network card. Under heavy traffic it would hang and take the whole server down with it in a freeze. At first I didn't even suspect it. I bumped the k3s VM from 8 to 16 vCPUs to test whether it was a CPU shortage, and it wasn't. The real cause was the card: the fix was to turn off the offloads and move packet processing to the CPU. The freezes stopped.</p>
+
+            <p class="leading-relaxed">The 16 vCPUs stayed. The M80q's i5-13500T has 20 threads, so it doesn't go over the limit, but there was also no reason for it other than me forgetting to change it back. I even updated Terraform to match what I'd done by hand instead of undoing it.</p>
+
+            <p class="leading-relaxed">Jellyfin got a dedicated SSD. Downloading, watching, and deleting on the OS disk made no sense, so the media moved to a disk of its own. That change also needed a manual fix: the playbook pointed at the wrong disk, and the machine only ended up right because I fixed the fstab by hand, twice. The second time was after a power outage.</p>
+
+            <p class="leading-relaxed">And the M80q went from 16GB to 32GB of RAM, because with everything running it was already tight. I've been running a few test VMs on it too.</p>
+
+            <p class="leading-relaxed">None of this is outrageous. Each change solved a real problem. But the Proxmox <code>/etc/network/interfaces</code> isn't in any repo, and if I reinstalled the host tomorrow, the freeze would come back. I kept piling up this kind of thing without a list.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> The internship changed the priority</h2>
+            <p class="leading-relaxed">Then I started a DevOps internship focused on observability. I want to practice at home what I'm studying, with Prometheus, Loki, Alertmanager, and Alloy on top of the homelab. The monitoring LXC does exist, but it's pretty empty: Loki is up and nothing sends logs to it.</p>
+
+            <p class="leading-relaxed">Before putting more load on top, I wanted to know what was fragile. And there was a problem: the person looking was the same person who built it all, with the same assumptions and the same blind spots.</p>
+
+            <p class="leading-relaxed">So I asked Claude Opus to read the three repos (<code>homelab-network</code>, <code>homelab-infra</code>, and <code>homelab-gitops</code>) and point out the problems. Read-only, changing nothing. We also went through the git history looking for leaked secrets, and the <code>vault.yml</code> files have been encrypted since the first commit, which was expected, since I've always put some focus on the security side.</p>
+
+            <p class="leading-relaxed">The rest was less reassuring.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What turned up</h2>
+            <p class="leading-relaxed">A few examples:</p>
+
+            <ul class="list-disc list-inside space-y-2 pl-2">
+                <li>Guest and IoT could reach the OPNsense web interface and SSH, because the block covered the other VLANs but not the gateway's own IP.</li>
+                <li>The Immich and Nextcloud Postgres databases had no backup at all. The photos are on the NAS, but albums, faces, and metadata are in the database, on the VM's local disk. Nothing vital, but it makes a future restore easier.</li>
+                <li>Running the OPNsense playbook to change a DHCP reservation could upgrade and reboot the router.</li>
+                <li>Re-running the access point playbook deleted a firewall zone, whichever one happened to be at index 1 at the time.</li>
+                <li>Both pools on the NAS are striped, with no redundancy. That was my choice and it still is, but I had no scheduled SMART tests and no alerts at all. And the backup copy lived in the same box.</li>
+            </ul>
+
+            <p class="leading-relaxed">Some of it I knew about and had put off, some of it surprised me. What got me the most was the firewall: Guest and IoT being able to reach the OPNsense web interface and SSH is the most serious security flaw on the list. The database surprised me too: I had snapshots and replication between pools, and I thought that meant everything was backed up.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> How I organized it</h2>
+            <p class="leading-relaxed">Along with the findings, I answered a list of open questions, because some of the answers changed the priority. Was the Cudy AP still in production? Why 16 vCPUs? That brought out things only I knew, like the network card story.</p>
+
+            <p class="leading-relaxed">The result became a review document with three levels:</p>
+
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Level</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">What it means</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Examples</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Serious</td>
+                            <td class="p-3">Can cause data loss or exposure</td>
+                            <td class="p-3">Firewall, database with no backup, media disk</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Important</td>
+                            <td class="p-3">Will come due, just not today</td>
+                            <td class="p-3">Floating versions, secrets only in the cluster, IPs outside the code</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3">Improvement</td>
+                            <td class="p-3">I'd do it differently, no rush</td>
+                            <td class="p-3">Redis on Nextcloud, Ansible roles, QSV on Jellyfin</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Severity tells you what's worse, but not what order to tackle things in. For that I split the work into phases, using the internship as the reference:</p>
+
+            <ul class="list-disc list-inside space-y-2 pl-2">
+                <li><strong class="text-zinc-300">Phase 1:</strong> close the critical items before observability, plus whatever avoids rework later.</li>
+                <li><strong class="text-zinc-300">Phase 2:</strong> observability, with the backup alerts already included.</li>
+                <li><strong class="text-zinc-300">Phase 3:</strong> the rest, like pinning versions, taking care of secrets, and moving what's left to GitOps.</li>
+            </ul>
+
+            <p class="leading-relaxed">The order inside a phase matters too. One example: separating the OPNsense upgrade had to come before touching the firewall through code, because applying the playbook could still reboot the router.</p>
+
+            <p class="leading-relaxed">I also tagged each action as <code>[code]</code>, <code>[console]</code>, or <code>[both]</code>. Anything done in the interface gets its exact value written down on the spot. That's the rule to avoid repeating what happened with the network card.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What I already wanted to do</h2>
+            <p class="leading-relaxed">Not everything came from the review. I already had a list of things I wanted to do, and it went in too:</p>
+
+            <ul class="list-disc list-inside space-y-2 pl-2">
+                <li>Replace <code>homelab.luisbrancher.dev</code> with a domain of its own, <code>lflab.cc</code>, before observability, so probes and dashboards start out with their final names.</li>
+                <li>A simple page, <code>all.lflab.cc</code>, with links to everything. Right now I'm always hunting for IPs and ports.</li>
+                <li>Replace the Proxmox and TrueNAS network cards with M.2 2.5G ones. While I'm at it, I'll migrate from the Cudy AP to the Omada, which is already waiting.</li>
+                <li>An 8TB external HD for one more copy of the data.</li>
+                <li>A UPS, which I've already bought. Power outages played a part in several of the problems here.</li>
+            </ul>
+
+            <p class="leading-relaxed">Putting everything in the same document helped me see that some things depended on each other. Swapping the card, for example, changes the MACs, and the IPs depend on DHCP reservations that aren't even in the code.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> What I took from it</h2>
+            <p class="leading-relaxed">Before changing a single line, I'd already taken two things from this review. The first is that "it's working" said very little about my homelab. The databases went four months without a backup, and nothing complained at any point.</p>
+
+            <p class="leading-relaxed">The second is that a review like this only sees what's written down. The README still said the host was an i5-1345U, the processor of a mini PC that burned out before I bought the M80q, and Claude flagged the 16 vCPUs as more than the total thread count. The i5-13500T has 20. I only caught that much later, rereading the text. The outside view helped a lot, but checking it is still on me.</p>
+
+            <p class="leading-relaxed">The next step is to go through phase 1 item by item, with a diff and <code>--check</code> before applying, and writing down whatever gets done in the interface. Observability starts after that.</p>
+
+        </article>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+</body>
+</html>
