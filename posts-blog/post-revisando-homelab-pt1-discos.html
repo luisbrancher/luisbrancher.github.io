@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>48GB presos no thin pool e outros problemas nos discos do homelab | DevOps Portfolio</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="As primeiras mudanças da revisão do homelab, começando pelos discos: alertas e SMART no NAS, um playbook que só estava certo por acaso e quase 48GB presos no thin pool.">
+    <meta property="og:title" content="48GB presos no thin pool e outros problemas nos discos do homelab | DevOps Portfolio">
+    <meta property="og:description" content="As primeiras mudanças da revisão do homelab, começando pelos discos: alertas e SMART no NAS, um playbook que só estava certo por acaso e quase 48GB presos no thin pool.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://luisbrancher.dev/posts-blog/post-revisando-homelab-pt1-discos.html">
+    <meta property="og:image" content="https://luisbrancher.dev/assets/og-image.jpg">
+    <!-- Canonical & Hreflang -->
+    <link rel="canonical" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-pt1-discos.html">
+    <link rel="alternate" hreflang="pt-BR" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-pt1-discos.html">
+    <link rel="alternate" hreflang="en" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-pt1-discos-en.html">
+    <link rel="alternate" hreflang="x-default" href="https://luisbrancher.dev/posts-blog/post-revisando-homelab-pt1-discos.html">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    keyframes: {
+                        blink: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '0' },
+                        }
+                    },
+                    animation: {
+                        blink: 'blink 1s step-end infinite',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-zinc-950 text-zinc-400 font-mono antialiased selection:bg-emerald-500/30 overflow-y-scroll">
+
+    <!-- Navegação -->
+    <nav class="border-b border-zinc-800/50 bg-zinc-950 sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <a href="../index.html" class="text-lg font-bold text-zinc-200 tracking-tight">luisbrancher@<span class="text-emerald-500">portfolio</span>:~$</a>
+            <ul class="flex flex-wrap justify-center gap-3 md:gap-6 text-sm text-zinc-500">
+                <li><a href="../index.html" class="hover:text-emerald-400 transition-colors">~/home</a></li>
+                <li><a href="../cv.html" class="hover:text-emerald-400 transition-colors">~/cv</a></li>
+                <li><a href="../certificacoes.html" class="hover:text-emerald-400 transition-colors">~/certs</a></li>
+                <li><a href="../homelab.html" class="hover:text-emerald-400 transition-colors">~/homelab</a></li>
+                <li><a href="../blog.html" class="text-emerald-400 transition-colors">~/blog</a></li>
+                <li class="pl-3 md:pl-4 border-l border-zinc-800 flex items-center gap-2 text-xs">
+                    <span class="text-emerald-500 font-bold flex items-center gap-1">🇧🇷 PT</span>
+                    <span class="text-zinc-700">|</span>
+                    <a href="post-revisando-homelab-pt1-discos-en.html" class="text-zinc-500 hover:text-emerald-400 transition-colors flex items-center gap-1">🇺🇸 EN</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Conteúdo do Artigo -->
+    <main class="container mx-auto px-6 py-16 max-w-3xl">
+
+        <!-- Botão Voltar -->
+        <a href="../blog.html" class="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-emerald-400 transition-colors mb-8">
+            <span>←</span> cd ..
+        </a>
+
+        <!-- Cabeçalho do Artigo -->
+        <header class="mb-12 border-b border-zinc-800/50 pb-8">
+            <div class="flex items-center gap-4 mb-4 text-xs text-zinc-500">
+                <time datetime="2026-11-04">04 Nov 2026</time>
+                <span>•</span>
+                <span>7 min de leitura</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-zinc-200 mb-6 tracking-tight leading-tight">
+                48GB presos no thin pool e outros problemas nos discos do homelab
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">HOMELAB</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TRUENAS</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">SMART</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">LVM-THIN</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">TERRAFORM</span>
+                <span class="text-[10px] uppercase px-2 py-0.5 border border-zinc-700 text-zinc-400 rounded">ANSIBLE</span>
+            </div>
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="https://github.com/luisbrancher/homelab-infra" target="_blank" class="inline-flex items-center gap-2 text-sm px-4 py-2 border border-zinc-800 bg-zinc-900/30 hover:border-emerald-500/50 hover:bg-zinc-900/80 hover:text-emerald-400 text-zinc-300 rounded transition-all group">
+                    <span class="text-zinc-500 group-hover:text-emerald-500 transition-colors">💻</span> homelab-infra
+                </a>
+            </div>
+        </header>
+
+        <!-- Corpo do Texto -->
+        <article class="prose prose-invert prose-zinc max-w-none text-zinc-400 space-y-6">
+
+            <p class="leading-relaxed">No <a href="post-revisando-homelab.html" class="text-emerald-400 hover:underline">post anterior</a> contei como cheguei na revisão do homelab e como dividi o trabalho em fases antes da observabilidade. Agora começam as mudanças, e começo pelos discos, que foi onde achei mais coisa funcionando por sorte.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Pools em stripe e nenhum aviso</h2>
+            <p class="leading-relaxed">Meu NAS tem dois pools ZFS em stripe, com dois discos cada. Sem redundância, por escolha: prefiro o espaço. O preço é que um disco que morre leva o pool inteiro, e eu não tinha nada me avisando. Sem scrub com alerta e sem SMART agendado, a primeira notícia de um disco ruim seria o pool sumir.</p>
+
+            <p class="leading-relaxed">O primeiro ajuste foi o mais simples. Criei um bot no Telegram e liguei como serviço de alerta no próprio TrueNAS. Com o nível em Warning, ele cobre falha de replicação, pool degradado, scrub com erro e disco enchendo.</p>
+
+            <p class="leading-relaxed">Pros testes de SMART, a minha versão do TrueNAS não mostra o card de Periodic S.M.A.R.T. Tests, então virou Cron Job como root, um short toda quarta e um long todo dia 15:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>for d in $(smartctl --scan | awk '{print $1}'); do smartctl -t short $d; done</code></pre>
+            </div>
+
+            <img src="../assets/images-revisando-homelab-pt1-discos/cron-jobs-smart.png" alt="Cron jobs de SMART no TrueNAS" class="rounded border border-zinc-800 my-4 max-w-full">
+
+            <p class="leading-relaxed">O cron só dispara o teste, ninguém olha o resultado. Pra isso instalei o Scrutiny, que guarda o histórico de cada disco e manda notificação no mesmo Telegram.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O SSD de boot que nasceu "Failed"</h2>
+            <p class="leading-relaxed">Na primeira coleta, o Scrutiny marcou o NVMe de boot do TrueNAS como Failed, com 121 Media Errors. São erros de integridade que o controlador não conseguiu corrigir, então não era alarme falso. Levei um susto.</p>
+
+            <p class="leading-relaxed">O <code>smartctl -a</code> contou uma história mais calma:</p>
+
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Atributo</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Critical Warning</td>
+                            <td class="p-3">0x00</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Available Spare</td>
+                            <td class="p-3">100%</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Percentage Used</td>
+                            <td class="p-3">6%</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Power On Hours</td>
+                            <td class="p-3">12.867</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Unsafe Shutdowns</td>
+                            <td class="p-3">53</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Error Information Log</td>
+                            <td class="p-3">No Errors Logged</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3">Self-test short e long</td>
+                            <td class="p-3">Completed without error</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Desgaste de 6%, nenhum bloco reserva usado, log de erros vazio e os dois testes passando. Tudo indica que os erros são antigos, provavelmente da vida anterior desse SSD, que é usado. A urgência caiu de "trocar já" pra "acompanhar". O contador nunca volta a zero, então o Scrutiny vai mostrar Failed pra sempre. O que eu preciso olhar é se o número sobe.</p>
+
+            <p class="leading-relaxed">Anotei os valores de hoje pra comparar daqui a uma ou duas semanas e fiz backup da config do TrueNAS fora do NAS. Se esse disco morrer, os dados continuam nos pools, mas o NAS para, e com ele o NFS do cluster. Com o arquivo de config, é reinstalar e subir de volta.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O disco que só estava certo por acaso</h2>
+            <p class="leading-relaxed">Esse aqui me incomodou mais. No playbook do <code>k3s-node</code>, o disco de mídia do Jellyfin estava assim:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>- name: Mount media SSD persistently
+  ansible.posix.mount:
+    path: /mnt/media-ssd
+    src: /dev/sda1</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Só que na VM o <code>sda</code> é o disco do SO. A mídia é o <code>sdb</code>. Eu já tinha caído nisso duas vezes e corrigido o fstab na mão, sem levar a correção pro código. Se eu rodasse esse playbook de novo, ele reescreveria o fstab, e no próximo reboot <code>/mnt/media-ssd</code> passaria a ser a própria raiz do sistema. O Linux monta o mesmo ext4 duas vezes sem reclamar, e o Jellyfin ia escanear o <code>/</code> inteiro.</p>
+
+            <p class="leading-relaxed">O código agora usa o caminho <code>/dev/disk/by-id/</code>, que vem do slot da VM e não muda quando <code>sda</code> e <code>sdb</code> trocam de ordem. O mount usa o UUID, lido na hora com <code>blkid</code>. Se eu fixasse o UUID no código, recriar a VM quebraria tudo, porque o disco novo teria outro.</p>
+
+            <p class="leading-relaxed">Faltava um segundo risco: se o SSD não montar, o Jellyfin escreve na pasta vazia que fica embaixo do ponto de montagem e enche o disco do SO sem ninguém perceber. Dá pra resolver com <code>chattr +i</code> nessa pasta, porque aí a escrita falha. O problema é que ela está escondida pelo próprio mount, e eu não queria desmontar nada. O truque foi um bind mount do <code>/</code>, que mostra o que tem por baixo:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>tmp=$(mktemp -d)
+mount --bind / "$tmp"
+trap 'umount "$tmp"; rmdir "$tmp"' EXIT
+chattr +i "$tmp/mnt/media-ssd"</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Sem desmontar nada e sem parar o Jellyfin. A versão no playbook também confere com <code>lsattr</code> se a flag já está lá.</p>
+
+            <p class="leading-relaxed">A revisão também sugeria um drop-in no k3s com <code>RequiresMountsFor=/mnt/media-ssd</code>, e acabei descartando. Sem <code>nofail</code> no fstab, a falta do SSD no boot já joga a VM em modo de emergência, então ali ele não acrescenta nada. Depois do boot, uma falha nesse disco derrubaria o k3s inteiro, Immich e Nextcloud juntos, por causa de um disco com filme. Não valia a troca.</p>
+
+            <h3 class="text-lg font-semibold text-zinc-300 mt-6">Rodar de novo é o teste</h3>
+            <p class="leading-relaxed">Fui rodando com <code>--check --diff</code> antes de aplicar, e isso pegou dois problemas.</p>
+
+            <p class="leading-relaxed">O primeiro veio já na simulação: a task do ponto de montagem ia mudar a permissão de 775 pra 755. É que <code>/mnt/media-ssd</code> são duas pastas no mesmo caminho, a vazia do SO e a raiz do SSD por cima, e a task via a de cima. O <code>mode: '0755'</code> do código não batia com o que eu tinha deixado na máquina. Mais um drift. Tirei o <code>mode</code>, já que a task só precisa garantir que a pasta existe.</p>
+
+            <p class="leading-relaxed">O segundo foi depois de aplicar. A segunda execução tinha que dar <code>changed=0</code> e deu <code>changed=1</code>. O bug estava nessa linha, que o Claude escreveu e eu aprovei sem perceber:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>changed_when: "'changed' in media_ssd_immutable.stdout"</code></pre>
+            </div>
+
+            <p class="leading-relaxed">O script imprime <code>changed</code> ou <code>unchanged</code>, e <code>unchanged</code> contém <code>changed</code>. A VM estava certa, só o relatório mentia. Um <code>changed</code> que aparece sempre não quebra nada hoje, mas me ensinaria a ignorar esse aviso. Trocar por <code>== 'changed'</code> resolveu, e a execução seguinte deu <code>changed=0</code>.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> 48GB presos no thin pool</h2>
+            <p class="leading-relaxed">Os dois discos da VM ficam em LVM-Thin, com <code>discard=ignore</code>. Eu li isso errado na primeira vez: achei que a VM não sabia o que tinha sido apagado e que a gente ia corrigir só o número mostrado. É o contrário. A VM sabe, e o <code>df</code> está certo. Quem não fica sabendo é o Proxmox, porque o aviso de "esses blocos estão livres" morre no caminho. O bloco continua ocupado no SSD físico.</p>
+
+            <p class="leading-relaxed">No fluxo do Jellyfin, de baixar, assistir e apagar, o pool só cresce. Quando chega em 100%, a VM trava com erro de I/O, mesmo achando que tem espaço de sobra.</p>
+
+            <p class="leading-relaxed">O ajuste no Terraform é pequeno:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>   disk {
+     interface    = "scsi1"
+     size         = 220
+     datastore_id = "media-ssd"
+<span class="text-emerald-400">+    discard      = "on"</span>
+<span class="text-emerald-400">+    ssd          = true</span>
+   }</code></pre>
+            </div>
+
+            <p class="leading-relaxed">O <code>apply</code> não bastou, e isso eu não sabia. O Proxmox gravou a configuração nova e a VM seguiu rodando com a antiga:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-zinc-400"><code>cur scsi1: media-ssd:vm-100-disk-0,...,discard=ignore,...,ssd=0
+new scsi1: media-ssd:vm-100-disk-0,...,discard=on,...,ssd=1</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Um reboot de dentro da VM também não resolve, porque o processo do QEMU continua o mesmo. Precisa desligar e ligar pelo host:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>qm shutdown 100 --timeout 180 &amp;&amp; qm start 100</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Depois disso, o <code>discard</code> só cuida do que for apagado dali pra frente. Na VM, o <code>/</code> já monta com <code>discard</code>, mas a mídia depende do <code>fstrim.timer</code> semanal, que deixei garantido no Ansible. Pro que já estava preso, rodei <code>fstrim -av</code> na VM e <code>pct fstrim 120</code> no host pra LXC de monitoramento, já que contêiner não recebe <code>discard</code> como VM. O resultado no <code>lvs</code>:</p>
+
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Volume</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Antes</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Depois</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Devolvido</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">SO da VM (50G)</td>
+                            <td class="p-3">98,73%</td>
+                            <td class="p-3">56,39%</td>
+                            <td class="p-3">~21GB</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Mídia da VM (220G)</td>
+                            <td class="p-3">19,95%</td>
+                            <td class="p-3">8,07%</td>
+                            <td class="p-3">~26GB</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3">LXC de monitoramento (20G)</td>
+                            <td class="p-3">31,07%</td>
+                            <td class="p-3">25,83%</td>
+                            <td class="p-3">~1GB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Quase 48GB, sem sintoma nenhum até eu olhar. O <code>fstrim</code> chegou a dizer "202,2 GiB trimmed" na mídia, mas esse número é todo o espaço livre avisado, inclusive o que nunca foi usado. O ganho de verdade é a queda no <code>lvs</code>.</p>
+
+            <p class="leading-relaxed">Nessa saída apareceu outra coisa: o disco virtual da mídia tem 220G e o pool que hospeda ele tem 218,97G. Se eu encher a mídia de verdade, o pool acaba antes do sistema de arquivos. Anotei pra não passar de uns 200G.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> Quanto disco o SO precisa</h2>
+            <p class="leading-relaxed">O disco do SO estava em 59%, e nove dias antes estava em 49%. Minha ideia era aumentar bastante, já que os dados moram no TrueNAS e esse disco seria só de sistema. Fui medir antes:</p>
+
+            <div class="overflow-x-auto my-6">
+                <table class="w-full text-sm text-left border-collapse border border-zinc-800">
+                    <thead class="bg-zinc-900/50">
+                        <tr>
+                            <th class="p-3 font-semibold border-b border-zinc-800">O que ocupa</th>
+                            <th class="p-3 font-semibold border-b border-zinc-800">Tamanho</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-zinc-400">
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Imagens de container</td>
+                            <td class="p-3">19G</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Logs do journal</td>
+                            <td class="p-3">3,9G</td>
+                        </tr>
+                        <tr class="border-b border-zinc-800/50">
+                            <td class="p-3">Dados dos pods</td>
+                            <td class="p-3">2,9G</td>
+                        </tr>
+                        <tr>
+                            <td class="p-3">Bancos do Immich e do Nextcloud</td>
+                            <td class="p-3">1,6G</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="leading-relaxed">Não era só sistema. Os bancos moram aqui, e as imagens são o que mais cresce. Fiquei em 100G, e não em 150G, por dois motivos. O k3s só limpa imagem antiga perto de 85% de uso, então um disco maior acumula mais lixo antes de limpar. E 150G faria a soma dos discos virtuais passar do tamanho do pool. O Proxmox só cresce disco, nunca reduz, e crescer de novo leva poucos minutos, então não tem por que exagerar agora.</p>
+
+            <p class="leading-relaxed">Crescer são três camadas, e cada uma tem o seu comando:</p>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded p-4 overflow-x-auto mt-4 mb-6">
+<pre class="text-sm text-emerald-400"><code>terraform apply                   # disco virtual
+sudo growpart /dev/sda 1          # partição
+sudo resize2fs /dev/sda1          # sistema de arquivos</code></pre>
+            </div>
+
+            <p class="leading-relaxed">Antes de rodar, o <code>growpart --dry-run</code> mostrou que o início da partição e o UUID não mudavam. Foi tudo com a VM ligada, sem queda de serviço, e o <code>/</code> foi de 59% pra 30%.</p>
+
+            <h2 class="text-xl font-bold text-zinc-200 mt-10 mb-4 flex items-center gap-2"><span class="text-emerald-500">#</span> O que ficou aberto</h2>
+            <p class="leading-relaxed">Ainda preciso comparar os contadores do SSD de boot com os valores anotados, agendar o <code>pct fstrim</code> da LXC e mover a biblioteca do Jellyfin pra uma subpasta, porque hoje ela aponta pra raiz do volume.</p>
+
+            <div class="p-6 bg-emerald-950/30 border border-emerald-900 rounded-lg mt-10">
+                <h3 class="text-lg font-bold text-emerald-500 mb-3 flex items-center gap-2">💡 O que ficou de aprendizado</h3>
+                <p class="leading-relaxed text-zinc-300"><strong>Sobre SMART</strong>: teste que ninguém olha não avisa nada, e um Failed sozinho não é diagnóstico. Os 121 Media Errors me assustaram, mas o que vou acompanhar é se o contador sobe.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre drift</strong>: correção feita na mão e não levada pro código continua sendo um problema, só que escondido. O fstab estava certo na máquina e errado no playbook, e a próxima execução desfaria o conserto.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre idempotência</strong>: <code>--check --diff</code> antes e uma segunda execução depois pegam coisas diferentes. A simulação achou a permissão que ia mudar, e a segunda execução achou o <code>changed_when</code> que mentia.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre thin provisioning</strong>: o <code>df</code> da VM não diz quanto o pool está ocupando, quem mostra isso é o <code>lvs</code>. E o <code>discard</code> novo só valeu depois de desligar e ligar a VM pelo host.</p>
+                <p class="leading-relaxed text-zinc-300 mt-2"><strong>Sobre dimensionar disco</strong>: medir antes mudou a decisão. Eu achava que o disco do SO era só de sistema, mas os bancos moram ali. Como dá pra crescer depois e não dá pra reduzir, fiquei com o menor tamanho que resolvia.</p>
+            </div>
+
+        </article>
+
+    </main>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-zinc-800/50 text-zinc-600 py-8 text-center mt-12 text-xs">
+        <p>exit 0; &copy; 2026 DevOps.Journey</p>
+    </footer>
+
+</body>
+</html>
