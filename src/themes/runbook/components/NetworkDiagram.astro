@@ -1,0 +1,225 @@
+---
+// Diagrama completo do homelab (mesmos nós e ligações de public/assets/diagram-as-code.d2),
+// com pacotes percorrendo os cabos. Coordenadas no viewBox de 1120x690.
+import { vlans } from '../../../data/profile';
+import type { Lang } from '../../../lib/routes';
+
+interface Props { lang: Lang; showLegend?: boolean }
+const { lang, showLegend = true } = Astro.props;
+
+type Vlan = 'core' | 'trusted' | 'iot' | 'lab' | 'guest';
+type Pt = [number, number];
+type Edge = { p: Pt[]; c: Vlan; wifi?: boolean; both?: boolean; label?: string; at?: Pt };
+type Node = { x: number; y: number; w: number; h?: number; label: string; sub?: string; c: Vlan };
+
+const colorOf = (c: Vlan) => (c === 'core' ? 'var(--accent-2)' : `var(--v-${c})`);
+
+const groups = [
+  { x: 440, y: 8, w: 200, h: 60, c: 'core' as Vlan, label: 'WAN', lx: 452, ly: 42 },
+  { x: 592, y: 350, w: 228, h: 86, c: 'iot' as Vlan, label: 'VLAN IoT (ID 20)', lx: 604, ly: 427 },
+  { x: 832, y: 350, w: 84, h: 86, c: 'guest' as Vlan, label: 'VLAN Guest', label2: '(ID 30)', lx: 874, ly: 390, center: true },
+  { x: 928, y: 350, w: 168, h: 86, c: 'lab' as Vlan, label: 'VLAN Lab (ID 40)', lx: 1012, ly: 427, center: true },
+  { x: 16, y: 460, w: 1088, h: 226, c: 'trusted' as Vlan, label: 'VLAN Trusted (ID 10)', lx: 30, ly: 672 },
+];
+
+// caixas aninhadas dentro da VLAN Trusted: hosts e o que roda neles
+const hosts = [
+  { x: 146, y: 478, w: 176, h: 104, label: 'Raspberry Pi 4', lx: 158, ly: 496 },
+  { x: 340, y: 478, w: 150, h: 78, label: 'TrueNAS', sub: 'Lenovo V50s · i3-10100', lx: 352, ly: 494 },
+  { x: 530, y: 474, w: 562, h: 202, label: 'Proxmox Host (i5-13500T)', lx: 544, ly: 492 },
+  { x: 544, y: 500, w: 286, h: 100, label: 'VM k3s-node · k3s + ArgoCD', lx: 558, ly: 518, dim: true },
+  { x: 842, y: 500, w: 236, h: 98, label: 'LXC lxc-monitoring', lx: 856, ly: 518, dim: true },
+  { x: 842, y: 606, w: 236, h: 62, label: 'LXC forgejo', lx: 856, ly: 624, dim: true },
+];
+
+// serviços em linha dentro de cada host: [x inicial, y, [nome, largura]...]
+const row = (x: number, y: number, items: [string, number][]): Node[] =>
+  items.map(([label, w]) => {
+    const node: Node = { x, y, w, h: 30, label, c: 'trusted' };
+    x += w + 6;
+    return node;
+  });
+
+const nodes: Node[] = [
+  { x: 490, y: 26, w: 100, label: 'Internet', c: 'core' },
+  { x: 430, y: 100, w: 220, label: 'ISP Modem (Bridge Mode)', c: 'core' },
+  { x: 760, y: 100, w: 130, label: 'Tailscale VPN', c: 'core' },
+  { x: 430, y: 158, w: 220, h: 46, label: 'OPNsense Firewall', sub: 'MiniPC N150 · 4 NICs', c: 'core' },
+  { x: 430, y: 228, w: 220, h: 36, label: '2.5GbE Switch', c: 'core' },
+  { x: 770, y: 290, w: 180, h: 36, label: 'Omada WiFi 6 AP', c: 'core' },
+  { x: 600, y: 368, w: 40, label: 'TVs', c: 'iot' },
+  { x: 646, y: 368, w: 100, label: 'Smart devices', c: 'iot' },
+  { x: 752, y: 368, w: 60, label: 'Printer', c: 'iot' },
+  { x: 936, y: 368, w: 42, label: 'Pi 3', c: 'lab' },
+  { x: 984, y: 368, w: 96, h: 44, label: 'Cudy TR3000', sub: 'OpenWrt · AP', c: 'lab' },
+  { x: 30, y: 500, w: 100, h: 46, label: 'Workstation', sub: 'PC', c: 'trusted' },
+  { x: 340, y: 578, w: 86, label: 'Smartphones', c: 'trusted' },
+  { x: 430, y: 578, w: 60, label: 'Laptops', c: 'trusted' },
+  ...row(352, 518, [['Scrutiny', 68]]),
+  ...row(158, 506, [['Omada Controller', 120]]),
+  ...row(158, 542, [['MotionEye', 73], ['UpSnap', 54]]),
+  ...row(558, 526, [['nextcloud', 74], ['immich', 56], ['jellyfin', 70]]),
+  ...row(558, 562, [['cert-manager', 94], ['cnpg-operator', 100]]),
+  ...row(856, 526, [['prometheus', 80], ['alertmanager', 92]]),
+  ...row(856, 562, [['grafana', 60], ['loki', 44], ['blackbox', 72]]),
+  ...row(856, 632, [['forgejo', 66], ['forgejo-runner', 112]]),
+];
+
+const wifiTrusted = (x: number): Pt[] => [[770, 308], [576, 308], [576, 446], [512, 446], [512, 566], [x, 566], [x, 578]];
+const edges: Edge[] = [
+  { p: [[540, 60], [540, 100]], c: 'core' },
+  { p: [[540, 134], [540, 158]], c: 'core' },
+  { p: [[540, 204], [540, 228]], c: 'core' },
+  { p: [[825, 134], [825, 181], [650, 181]], c: 'core', both: true, label: 'WireGuard Tunnel', at: [660, 174] },
+  { p: [[650, 254], [860, 254], [860, 290]], c: 'core', label: 'PoE+', at: [664, 268] },
+  { p: [[470, 264], [470, 330], [80, 330], [80, 500]], c: 'trusted' },
+  { p: [[495, 264], [495, 346], [234, 346], [234, 478]], c: 'trusted' },
+  { p: [[520, 264], [520, 362], [415, 362], [415, 478]], c: 'trusted' },
+  { p: [[560, 264], [560, 474]], c: 'trusted' },
+  { p: [[650, 236], [1032, 236], [1032, 368]], c: 'lab' },
+  { p: wifiTrusted(383), c: 'trusted', wifi: true },
+  { p: wifiTrusted(460), c: 'trusted', wifi: true },
+  { p: [[776, 326], [776, 338], [620, 338], [620, 368]], c: 'iot', wifi: true },
+  { p: [[790, 326], [790, 346], [696, 346], [696, 368]], c: 'iot', wifi: true },
+  { p: [[804, 326], [804, 354], [782, 354], [782, 368]], c: 'iot', wifi: true },
+  { p: [[874, 326], [874, 350]], c: 'guest', wifi: true },
+  { p: [[930, 326], [930, 340], [957, 340], [957, 368]], c: 'lab', wifi: true },
+  { p: [[544, 523], [490, 523]], c: 'trusted', label: 'NFS', at: [500, 517] },
+  { p: [[1032, 436], [1032, 460]], c: 'lab', label: 'Inter-VLAN Access', at: [925, 451] },
+];
+
+// linha ortogonal com cantos arredondados
+const toPath = (p: Pt[], r = 8) => {
+  let d = `M${p[0][0]},${p[0][1]}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const [ax, ay] = p[i - 1], [bx, by] = p[i], [cx, cy] = p[i + 1];
+    const k1 = Math.min(r, Math.hypot(bx - ax, by - ay) / 2), k2 = Math.min(r, Math.hypot(cx - bx, cy - by) / 2);
+    const inX = bx - Math.sign(bx - ax) * k1, inY = by - Math.sign(by - ay) * k1;
+    const outX = bx + Math.sign(cx - bx) * k2, outY = by + Math.sign(cy - by) * k2;
+    d += ` L${inX},${inY} Q${bx},${by} ${outX},${outY}`;
+  }
+  const end = p[p.length - 1];
+  return `${d} L${end[0]},${end[1]}`;
+};
+const lengthOf = (p: Pt[]) => p.slice(1).reduce((sum, q, i) => sum + Math.hypot(q[0] - p[i][0], q[1] - p[i][1]), 0);
+
+const wires = edges.map((e, i) => {
+  const dur = Math.max(1.4, lengthOf(e.p) / 110);
+  return { ...e, d: toPath(e.p), dur, begin: -((i * 0.83) % dur) };
+});
+
+const hint = lang === 'pt' ? 'arraste para ver tudo →' : 'swipe to see everything →';
+---
+
+<div class="net-wrap" data-net tabindex="0">
+  <svg class="net" viewBox="0 0 1120 690" role="img" aria-label={lang === 'pt' ? 'Diagrama completo da rede do homelab' : 'Full homelab network diagram'}>
+    <defs>
+      <marker id="net-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M1 1 L7 4 L1 7" class="arrow" />
+      </marker>
+    </defs>
+
+    {showLegend && <g class="legend">
+      {vlans.map((v, i) => (
+        <g>
+          <rect x="24" y={20 + i * 20} width="11" height="11" rx="3" style={`--c:${colorOf(v.name as Vlan)}`} class="swatch" />
+          <text x="44" y={29 + i * 20}>{`${v.name} · VLAN ${v.id}`}</text>
+        </g>
+      ))}
+      <line x1="24" x2="36" y1="110" y2="110" class="edge" />
+      <text x="44" y="114">{lang === 'pt' ? 'Cabo' : 'Wired'}</text>
+      <line x1="24" x2="36" y1="130" y2="130" class="edge wifi" />
+      <text x="44" y="134">Wi-Fi</text>
+    </g>}
+
+    {groups.map((g) => (
+      <g style={`--c:${colorOf(g.c)}`}>
+        <rect class="group" x={g.x} y={g.y} width={g.w} height={g.h} rx="10" />
+        <text class:list={['g-label', { center: g.center }]} x={g.lx} y={g.ly}>{g.label}</text>
+        {g.label2 && <text class:list={['g-label', { center: g.center }]} x={g.lx} y={g.ly + 16}>{g.label2}</text>}
+      </g>
+    ))}
+    {hosts.map((b) => (
+      <g style={`--c:${colorOf('trusted')}`}>
+        <rect class="inner" x={b.x} y={b.y} width={b.w} height={b.h} rx="8" />
+        <text class:list={['i-label', { dim: b.dim }]} x={b.lx} y={b.ly}>{b.label}</text>
+        {b.sub && <text class="e-label" x={b.lx} y={b.ly + 13}>{b.sub}</text>}
+      </g>
+    ))}
+
+    {wires.map((w) => (
+      <g style={`--c:${colorOf(w.c)}`}>
+        <path d={w.d} class:list={['edge', { wifi: w.wifi }]} marker-end="url(#net-arrow)" marker-start={w.both ? 'url(#net-arrow)' : undefined} />
+        <circle r="2.8" class="packet">
+          <animateMotion dur={`${w.dur}s`} begin={`${w.begin}s`} repeatCount="indefinite" path={w.d} />
+        </circle>
+        {w.both && (
+          <circle r="2.8" class="packet">
+            <animateMotion dur={`${w.dur}s`} begin={`${w.begin - w.dur / 2}s`} repeatCount="indefinite" path={w.d} keyPoints="1;0" keyTimes="0;1" calcMode="linear" />
+          </circle>
+        )}
+        {w.label && <text class="e-label" x={w.at![0]} y={w.at![1]}>{w.label}</text>}
+      </g>
+    ))}
+
+    {nodes.map((n, i) => {
+      const h = n.h ?? 34;
+      return (
+        <g class="node" style={`--c:${colorOf(n.c)}; --i:${i}`}>
+          <rect x={n.x} y={n.y} width={n.w} height={h} rx="7" />
+          <text x={n.x + n.w / 2} y={n.y + h / 2 + (n.sub ? -2 : 4)}>{n.label}</text>
+          {n.sub && <text class="sub" x={n.x + n.w / 2} y={n.y + h / 2 + 12}>{n.sub}</text>}
+        </g>
+      );
+    })}
+  </svg>
+</div>
+<p class="net-hint" aria-hidden="true">{hint}</p>
+
+<script>
+  // no celular o diagrama rola na horizontal: começa centrado no firewall/switch
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-net]').forEach((el) => {
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) * 0.42;
+    });
+  });
+</script>
+
+<style>
+  .net-wrap {
+    --v-trusted: #34d399; --v-iot: #fbbf24; --v-lab: #a78bfa; --v-guest: #38bdf8;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  :global(:root[data-theme='light']) .net-wrap { --v-trusted: #059669; --v-iot: #b45309; --v-lab: #7c3aed; --v-guest: #0284c7; }
+  .net { display: block; width: 100%; min-width: 880px; height: auto; }
+  .net-hint { display: none; margin: 8px 0 0; font: 11.5px var(--mono); color: var(--muted); text-align: right; }
+  @media (max-width: 960px) { .net-hint { display: block; } }
+
+  .group { fill: color-mix(in srgb, var(--c) 7%, transparent); stroke: color-mix(in srgb, var(--c) 45%, transparent); stroke-width: 1; stroke-dasharray: 5 4; }
+  .inner { fill: color-mix(in srgb, var(--c) 6%, transparent); stroke: color-mix(in srgb, var(--c) 30%, transparent); stroke-width: 1; }
+  .g-label { font: 600 11px var(--mono); fill: var(--c); }
+  .g-label.center { text-anchor: middle; }
+  .i-label { font: 600 11px var(--mono); fill: var(--text); }
+  .i-label.dim { font-weight: 500; fill: var(--text-2); }
+
+  .edge { fill: none; stroke: color-mix(in srgb, var(--c, var(--text-2)) 55%, var(--border-2)); stroke-width: 1.2; }
+  .edge.wifi { stroke-dasharray: 3 4; }
+  .arrow { fill: none; stroke: var(--text-2); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+  .packet { fill: var(--c); filter: drop-shadow(0 0 3px var(--c)); }
+  .e-label { font: 500 9.5px var(--mono); fill: var(--muted); }
+
+  .node rect { fill: var(--surface); stroke: color-mix(in srgb, var(--c) 60%, var(--border-2)); stroke-width: 1; transition: fill .2s; }
+  .node:hover rect { fill: color-mix(in srgb, var(--c) 16%, var(--surface)); }
+  .node text { font: 500 11px var(--mono); fill: var(--text); text-anchor: middle; }
+  .node .sub { font-size: 9.5px; font-weight: 400; fill: var(--muted); }
+  .node { opacity: 0; animation: net-pop .5s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(var(--i) * 35ms + 150ms); }
+  @keyframes net-pop { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+  .legend text { font: 500 11px var(--mono); fill: var(--text-2); }
+  .swatch { fill: color-mix(in srgb, var(--c) 25%, transparent); stroke: var(--c); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .packet { display: none; }
+    .node { opacity: 1; animation: none; }
+  }
+</style>

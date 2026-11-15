@@ -1,0 +1,9 @@
+---
+import { langPaths } from '../../../lib/routes';
+import Page from '../../../themes/runbook/pages/Blog.astro';
+
+export const getStaticPaths = langPaths;
+const { lang } = Astro.props;
+---
+
+<Page lang={lang} />

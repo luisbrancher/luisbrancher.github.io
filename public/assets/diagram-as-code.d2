@@ -1,0 +1,141 @@
+direction: down
+
+classes: {
+  vlan_trusted: {
+    style: {
+      stroke: "#10b981"
+      stroke-width: 2
+      fill: "#10b981"
+      opacity: 0.3
+    }
+  }
+  vlan_iot: {
+    style: {
+      stroke: "#da9e1c"
+      stroke-width: 2
+      fill: "#da9e1c"
+      opacity: 0.3
+    }
+  }
+  vlan_guest: {
+    style: {
+      stroke: "#0ea5e9"
+      stroke-width: 2
+      fill: "#0ea5e9"
+      opacity: 0.2
+    }
+  }
+  vlan_lab: {
+    style: {
+      stroke: "#862bc3"
+      stroke-width: 2
+      fill: "#862bc3"
+      opacity: 0.2
+    }
+  }
+}
+
+WAN: {
+  Internet: {shape: cloud}
+}
+
+ISP_Modem: ISP Modem (Bridge Mode)
+OPNsense: OPNsense Firewall (MiniPC N150, 4 NICs) {shape: rectangle}
+Switch: 2.5GbE Switch {shape: rectangle}
+WiFi_AP: Omada WiFi 6 AP
+
+# VLANs
+VLAN_Trusted: {
+  class: vlan_trusted
+  label: "VLAN Trusted (ID 10)"
+
+  Workstation: Workstation PC
+  Smartphones
+  Laptops
+
+  NAS: TrueNAS (Lenovo V50s, i3-10100) {
+    Scrutiny
+  }
+
+  RPi: Raspberry Pi 4 {
+    Omada_Controller: Omada Controller
+    MotionEye
+    UpSnap
+  }
+
+  Proxmox: Proxmox Host (i5-13500T) {
+    k3s_node: VM k3s-node (k3s + ArgoCD) {
+      nextcloud
+      immich
+      jellyfin
+      cert-manager
+      cnpg-operator
+    }
+    lxc_monitoring: LXC lxc-monitoring {
+      Prometheus
+      Alertmanager
+      Grafana
+      Loki
+      blackbox
+    }
+    lxc_forgejo: LXC forgejo {
+      Forgejo
+      forgejo-runner
+    }
+  }
+}
+
+VLAN_IoT: {
+  class: vlan_iot
+  label: "VLAN IoT (ID 20)"
+
+  Smart_Devices: Smart devices
+  TVs
+  Printer
+}
+
+VLAN_Guest: {
+  class: vlan_guest
+  label: "VLAN Guest (ID 30)"
+}
+
+VLAN_Lab: {
+  class: vlan_lab
+  label: "VLAN Lab (ID 40)"
+
+  Cudy: Cudy TR3000 (OpenWrt, AP)
+  Pi3: Raspberry Pi 3
+}
+
+# --- CONNECTIONS ---
+
+WAN.Internet -> ISP_Modem
+ISP_Modem -> OPNsense
+OPNsense -> Switch
+
+# Physical Connections
+Switch -> VLAN_Trusted.Workstation
+Switch -> VLAN_Trusted.NAS
+Switch -> VLAN_Trusted.RPi
+Switch -> VLAN_Trusted.Proxmox
+Switch -> VLAN_Lab.Cudy
+Switch -> WiFi_AP: PoE+
+
+# Wi-Fi (segmented by VLAN)
+WiFi_AP -> VLAN_Trusted.Smartphones
+WiFi_AP -> VLAN_Trusted.Laptops
+WiFi_AP -> VLAN_IoT.Smart_Devices
+WiFi_AP -> VLAN_IoT.TVs
+WiFi_AP -> VLAN_IoT.Printer
+WiFi_AP -> VLAN_Guest
+WiFi_AP -> VLAN_Lab.Pi3
+
+# Storage
+VLAN_Trusted.Proxmox.k3s_node -> VLAN_Trusted.NAS: NFS
+
+# VPN
+Tailscale_VPN: Tailscale VPN
+Tailscale_VPN <-> OPNsense: WireGuard Tunnel
+
+# Rules
+VLAN_Lab -> VLAN_Trusted: Inter-VLAN Access

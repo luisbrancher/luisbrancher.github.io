@@ -1,0 +1,168 @@
+---
+import './runbook.css';
+import { person, certs, stack, loc } from '../../data/profile';
+import { copy, publicRepos, repoUrl } from '../../data/home';
+import { url, type Lang } from '../../lib/routes';
+
+interface Props {
+  lang: Lang;
+  title?: string;
+  description?: string;
+  /** URL equivalente no outro idioma */
+  altHref: string;
+  active?: 'blog' | 'cv';
+  ogType?: 'website' | 'article';
+}
+
+const { lang, title, description, altHref, active, ogType = 'website' } = Astro.props;
+const c = copy[lang];
+const fullTitle = title ? `${title} · Luis Brancher` : `Luis Brancher · DevOps & Cloud`;
+const desc = description ?? c.description;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const altAbs = new URL(altHref, Astro.site);
+const ptHref = lang === 'pt' ? canonical : altAbs;
+const enHref = lang === 'en' ? canonical : altAbs;
+const home = url(lang, 'home');
+const anchors = ['stack', 'projects', 'incidents', 'method', 'homelab', 'career', 'blog'] as const;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: person.short,
+  jobTitle: 'DevOps Intern',
+  worksFor: { '@type': 'Organization', name: 'ZPE Systems' },
+  knowsLanguage: ['pt-BR', 'en'],
+  url: Astro.site,
+  email: `mailto:${person.email}`,
+  address: { '@type': 'PostalAddress', addressLocality: 'Blumenau', addressRegion: 'SC', addressCountry: 'BR' },
+  sameAs: [person.github, person.linkedin],
+  knowsAbout: stack.map((x) => loc(x.name, 'en')),
+  hasCredential: certs.filter((x) => x.featured).map((x) => ({ '@type': 'EducationalOccupationalCredential', name: x.name })),
+  subjectOf: publicRepos.slice(0, 3).map((r) => repoUrl(r)),
+};
+---
+
+<!doctype html>
+<html lang={lang === 'pt' ? 'pt-BR' : 'en'}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={desc} />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="pt-BR" href={ptHref} />
+    <link rel="alternate" hreflang="en" href={enHref} />
+    <link rel="alternate" hreflang="x-default" href={enHref} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={desc} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={new URL('/assets/og-image.jpg', Astro.site)} />
+    <meta property="og:locale" content={lang === 'pt' ? 'pt_BR' : 'en_US'} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#f2f3f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      (function () {
+        var d = document.documentElement, saved = null;
+        d.classList.add('js');
+        try { saved = localStorage.getItem('lb-theme'); } catch (e) {}
+        d.dataset.theme = saved || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      })();
+    </script>
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">{c.skip}</a>
+    <header class="bar">
+      <div class="wrap bar-in">
+        <a class="brand" href={home}><img src="/pixel/face/smile.png" width="26" height="28" alt="" />Luis Brancher</a>
+        <nav class="nav" aria-label={lang === 'pt' ? 'Seções' : 'Sections'}>
+          {anchors.map((a) => (
+            <a href={`${home}#${a}`} data-spy={a} aria-current={active === a ? 'page' : undefined}>{c.nav[a]}</a>
+          ))}
+        </nav>
+        <div class="tools">
+          <a class="tool" href={url(lang, 'cv')} aria-current={active === 'cv' ? 'page' : undefined}>{c.cvShort}</a>
+          <a class="tool" href={altHref} hreflang={lang === 'pt' ? 'en' : 'pt-BR'} aria-label={lang === 'pt' ? 'Read in English' : 'Ler em português'}>{lang === 'pt' ? 'EN' : 'PT'}</a>
+          <button class="tool" id="theme" type="button" aria-label={c.theme}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" /></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main"><slot /></main>
+
+    <footer class="foot">
+      <div class="wrap foot-in">
+        <span>© {new Date().getFullYear()} {person.short}. {c.footer}</span>
+        <div class="foot-links">
+          <a href={person.github} target="_blank" rel="noopener">GitHub</a>
+          <a href={person.linkedin} target="_blank" rel="noopener">LinkedIn</a>
+          <a href={`mailto:${person.email}`}>Email</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      addEventListener('load', () => setTimeout(() => document.documentElement.classList.add('smooth'), 300));
+
+      document.getElementById('theme')?.addEventListener('click', () => {
+        const d = document.documentElement;
+        const next = d.dataset.theme === 'dark' ? 'light' : 'dark';
+        d.dataset.theme = next;
+        try { localStorage.setItem('lb-theme', next); } catch {}
+      });
+
+      // trocar de língua mantém o ponto da leitura: as duas versões têm a mesma estrutura,
+      // então guarda qual bloco estava no topo da tela (pela ordem) e onde ele estava
+      const BLOCKS = 'main section, main h2, main h3, main p, main li, main tr, main pre, main img';
+      const headerH = () => document.querySelector<HTMLElement>('.bar')?.offsetHeight ?? 0;
+      document.querySelector<HTMLAnchorElement>('.tools a[hreflang]')?.addEventListener('click', (e) => {
+        const a = e.currentTarget as HTMLAnchorElement;
+        const blocks = [...document.querySelectorAll<HTMLElement>(BLOCKS)];
+        const top = headerH();
+        const i = blocks.findIndex((b) => b.getBoundingClientRect().bottom > top + 8);
+        if (i < 1 && scrollY < 40) return; // no topo da página não há o que guardar
+        const at = i >= 0 ? blocks[i].getBoundingClientRect().top : 0;
+        const max = document.documentElement.scrollHeight - innerHeight;
+        try {
+          sessionStorage.setItem('lb-keep-place', JSON.stringify({ to: new URL(a.href).pathname, i, at, n: blocks.length, ratio: max > 0 ? scrollY / max : 0 }));
+        } catch {}
+      });
+      try {
+        const raw = sessionStorage.getItem('lb-keep-place');
+        sessionStorage.removeItem('lb-keep-place');
+        const s = raw && JSON.parse(raw);
+        if (s && s.to === location.pathname && !location.hash) {
+          const blocks = [...document.querySelectorAll<HTMLElement>(BLOCKS)];
+          const el = blocks.length === s.n ? blocks[s.i] : null;
+          const y = el
+            ? el.getBoundingClientRect().top + scrollY - s.at
+            : s.ratio * (document.documentElement.scrollHeight - innerHeight);
+          scrollTo({ top: y, behavior: 'instant' });
+        }
+      } catch {}
+
+      // marca no menu a seção em leitura e mantém o item visível no menu rolável do celular
+      const links = [...document.querySelectorAll<HTMLAnchorElement>('[data-spy]')];
+      const sections = links.map((a) => document.getElementById(a.dataset.spy!)).filter(Boolean) as HTMLElement[];
+      if (sections.length) {
+        const nav = document.querySelector<HTMLElement>('.nav')!;
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            const link = links.find((a) => a.dataset.spy === e.target.id)!;
+            if (!e.isIntersecting) { link.removeAttribute('aria-current'); return; }
+            links.forEach((a) => a.removeAttribute('aria-current'));
+            link.setAttribute('aria-current', 'true');
+            if (nav.scrollWidth > nav.clientWidth) nav.scrollLeft = link.offsetLeft - nav.offsetLeft - 16;
+          });
+        }, { rootMargin: '-30% 0px -65% 0px' });
+        sections.forEach((s) => io.observe(s));
+      }
+    </script>
+  </body>
+</html>

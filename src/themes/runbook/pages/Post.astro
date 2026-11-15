@@ -1,0 +1,83 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import Layout from '../Layout.astro';
+import { person } from '../../../data/profile';
+import { copy } from '../../../data/home';
+import { formatDate, getPosts, postLang, postUrl, readingTime, translationOf, url } from '../../../lib/routes';
+
+interface Props { post: CollectionEntry<'blog'> }
+const { post } = Astro.props;
+const lang = postLang(post);
+const c = copy[lang];
+const { Content, headings } = await render(post);
+const toc = headings.filter((h) => h.depth === 2);
+const other = await translationOf(post);
+const altHref = other ? postUrl(other) : url(lang === 'pt' ? 'en' : 'pt', 'blog');
+const all = await getPosts(lang);
+const idx = all.findIndex((p) => p.id === post.id);
+const repos = post.data.repos ?? (post.data.repo ? [post.data.repo] : []);
+const newer = all[idx - 1];
+const older = all[idx + 1];
+---
+
+<Layout lang={lang} active="blog" title={post.data.title} description={post.data.description} altHref={altHref} ogType="article">
+  <article class="wrap post">
+    <header class="head">
+      <a class="lnk crumb" href={url(lang, 'blog')}>← {c.blog.back}</a>
+      <p class="meta mono">
+        <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time>
+        <span>{readingTime(post)} {c.blog.minRead}</span>
+      </p>
+      <h1>{post.data.title}</h1>
+      <p class="desc">{post.data.description}</p>
+      <p class="tag-list">{post.data.tags.map((x) => <span>{x.toLowerCase()}</span>)}</p>
+      {repos.length > 0 && <p class="repo">{repos.map((r) => <a class="lnk mono ext" href={r} target="_blank" rel="noopener">{r.replace('https://github.com/', '')}</a>)}</p>}
+    </header>
+
+    <div class="layout">
+      <div class="prose"><Content /></div>
+      {toc.length > 1 && (
+        <aside class="toc">
+          <h2 class="sub-h">{c.blog.toc}</h2>
+          <ul>{toc.map((h) => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}</ul>
+          {other && <a class="lnk other" href={altHref}>{c.blog.other} →</a>}
+        </aside>
+      )}
+    </div>
+
+    <footer class="end">
+      <nav class="pager" aria-label={lang === 'pt' ? 'Outros artigos' : 'Other articles'}>
+        {older ? <a href={postUrl(older)}><span>←</span> {older.data.title}</a> : <span></span>}
+        {newer && <a class="right" href={postUrl(newer)}>{newer.data.title} <span>→</span></a>}
+      </nav>
+      <p class="hire">{copy[lang].contact.title} <a class="lnk" href={`mailto:${person.email}`}>{person.email}</a></p>
+    </footer>
+  </article>
+</Layout>
+
+<style>
+  .post { padding-block: 32px 64px; }
+  .head { max-width: 46rem; padding-bottom: 28px; }
+  .crumb { font-size: .9rem; }
+  .meta { display: flex; gap: 16px; margin-top: 28px; font-size: .8rem; color: var(--ink-3); }
+  h1 { margin-top: 10px; font: 700 clamp(1.9rem, 4.6vw, 3.1rem)/1.08 var(--display); font-stretch: 108%; letter-spacing: -.02em; }
+  .desc { margin-top: 14px; font-size: 1.15rem; line-height: 1.5; }
+  .head .tag-list { margin-top: 14px; }
+  .repo { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; font-size: .85rem; }
+  .layout { display: grid; grid-template-columns: minmax(0, 46rem) 15rem; gap: clamp(32px, 6vw, 88px); border-top: 1px solid var(--rule-strong); padding-top: 28px; }
+  .toc { position: sticky; top: calc(var(--header) + 24px); align-self: start; font-size: .88rem; }
+  .toc ul { margin-top: 10px; display: grid; gap: 4px; }
+  .toc li a { display: block; padding-block: 3px; color: var(--ink-3); text-decoration: none; line-height: 1.35; }
+  .toc li a:hover { color: var(--signal); }
+  .other { display: inline-block; margin-top: 16px; }
+  @media (max-width: 1040px) { .layout { grid-template-columns: minmax(0, 1fr); } .toc { display: none; } }
+  .end { max-width: 46rem; margin-top: 56px; }
+  .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; border-top: 1px solid var(--rule-strong); padding-top: 16px; }
+  .pager a { color: var(--ink); text-decoration: none; font-size: .95rem; line-height: 1.4; }
+  .pager a:hover { color: var(--signal); }
+  .pager span { color: var(--signal); }
+  .pager .right { text-align: right; }
+  .hire { margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--rule); color: var(--ink); overflow-wrap: anywhere; }
+  @media (max-width: 620px) { .pager { grid-template-columns: minmax(0, 1fr); } .pager .right { text-align: left; } }
+</style>
