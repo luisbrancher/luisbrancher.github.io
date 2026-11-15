@@ -1,0 +1,153 @@
+---
+// CV de uma página: a mesma tela vira o PDF (npm run cv:pdf) e sai bem em qualquer impressora.
+import Layout from '../Layout.astro';
+import { person, certs, certDate, loc } from '../../../data/profile';
+// mesmo conteúdo da home (data/home.ts), para o CV não contradizer a página
+import { copy, hiring, projects, skills, jobs, audiovisualJobs, schooling, extraCerts, repoUrl } from '../../../data/home';
+import { altLangUrl, type Lang } from '../../../lib/routes';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = copy[lang];
+const sortedCerts = [...certs, ...extraCerts].filter((x) => !['Era Conectada', 'TryHackMe'].includes(x.issuer) && !x.name.startsWith('LFEL1001') && !x.name.includes('Fundamentals')).sort((a, b) => b.date.localeCompare(a.date));
+const pdf = `/assets/luis-brancher-cv-${lang}.pdf`;
+---
+
+<Layout lang={lang} active="cv" title={c.cvShort} altHref={altLangUrl(lang, 'cv')}>
+  <div class="wrap actions">
+    <a class="btn primary sm" href={pdf} download>{c.cvPdf}</a>
+  </div>
+
+  <article class="wrap cv">
+    <header class="head">
+      <div>
+        <h1>{person.short}</h1>
+        <p class="title">{c.role}</p>
+      </div>
+      <ul class="contact-list">
+        <li>{loc(person.location, lang)}</li>
+        {hiring.workMode && <li>{loc(hiring.workMode, lang)}</li>}
+        {hiring.english && <li>{loc(hiring.english, lang)}</li>}
+        {hiring.citizenship && <li>{c.sheet.citizenship}: {loc(hiring.citizenship, lang)}</li>}
+        <li><a href={`mailto:${person.email}`}>{person.email}</a></li>
+        <li><a href={person.linkedin}>linkedin.com/in/luisbrancher</a></li>
+        <li><a href={person.github}>github.com/luisbrancher</a></li>
+        <li><a href="https://luisbrancher.dev">luisbrancher.dev</a></li>
+      </ul>
+    </header>
+
+    <p class="summary">{c.cvSummary}</p>
+
+    <section>
+      <h2>{c.stack.title}</h2>
+      <dl class="skills">
+        {skills.map((s) => (
+          <div><dt>{loc(s.area, lang)}</dt><dd>{(lang === 'en' ? s.tools.map((t) => t.replace('(estudo)', '(study)')) : s.tools).join(', ')}</dd></div>
+        ))}
+      </dl>
+    </section>
+
+    <section>
+      <h2>{c.cvProjects}</h2>
+      <ul class="items">
+        {projects.filter((p) => p.cv).map((p) => (
+          <li>
+            <div class="item-head"><h3>{loc(p.name, lang)}</h3><span class="repos">{p.repos.map((r) => <a href={repoUrl(r)}>{r}</a>)}</span></div>
+            <p>{loc(p.outcome, lang)}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section>
+      <h2>{c.career.experience}</h2>
+      <ul class="items">
+        <li>
+          <div class="item-head"><h3>{loc(jobs[0].role, lang)}, {loc(jobs[0].org, lang)}</h3><span class="period">{loc(jobs[0].period, lang)}</span></div>
+          {jobs[0].text && !jobs[0].bullets && <p>{loc(jobs[0].text, lang)}</p>}
+          {jobs[0].bullets &&<ul class="bullets">{jobs[0].bullets[lang].map((b) => <li>{b}</li>)}</ul>}
+        </li>
+        {audiovisualJobs.filter((j) => j.cv).map((j) => (
+          <li>
+            <div class="item-head"><h3>{loc(j.role, lang)}, {loc(j.org, lang)}</h3><span class="period">{loc(j.period, lang)}</span></div>
+            {j.text && <p>{loc(j.text, lang)}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <div class="two">
+      <section>
+        <h2>{c.career.certs}</h2>
+        <ul class="certs">
+          {sortedCerts.map((x) => <li><span>{x.name}, {x.issuer}</span><span class="period">{certDate(x.date, lang)}</span></li>)}
+        </ul>
+      </section>
+      <section>
+        <h2>{c.career.education}</h2>
+        <ul class="edu-list">
+          {schooling.slice(0, 3).map((e) => <li><strong>{loc(e.title, lang)}</strong><br />{e.org}, {loc(e.period, lang)}</li>)}
+        </ul>
+      </section>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; padding-block: 24px 0; max-width: 900px; }
+  .cv { max-width: 900px; padding-block: 28px 56px; color: var(--ink-2); font-size: .94rem; line-height: 1.45; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px 32px; padding-bottom: 14px; border-bottom: 2px solid var(--ink); }
+  h1 { font: 700 clamp(2.2rem, 6vw, 3.1rem)/1 var(--display); font-stretch: 116%; letter-spacing: -.03em; }
+  .title { margin-top: 8px; font: 600 1.05rem var(--display); font-stretch: 106%; color: var(--ink); }
+  .contact-list { font-size: .85rem; line-height: 1.5; text-align: right; }
+  .contact-list a { color: var(--ink); text-decoration: none; }
+  .contact-list a:hover { text-decoration: underline; }
+  .summary { margin-top: 14px; color: var(--ink); }
+  section { margin-top: 18px; }
+  h2 { font: 600 .74rem var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--signal); padding-bottom: 5px; border-bottom: 1px solid var(--rule); margin-bottom: 9px; }
+  .skills > div { display: grid; grid-template-columns: 13em minmax(0, 1fr); gap: 12px; padding-block: 1.5px; }
+  .skills dt { color: var(--ink); font-weight: 500; }
+  .items { display: grid; gap: 9px; }
+  .item-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 16px; }
+  h3 { font-size: .98rem; }
+  .repos { display: flex; flex-wrap: wrap; gap: 0 10px; font: 400 .74rem var(--mono); }
+  .repos a { color: var(--ink-2); text-decoration: none; }
+  .repos a:hover { color: var(--signal); }
+  .period { font: 400 .76rem var(--mono); color: var(--ink-3); white-space: nowrap; }
+  .bullets { margin-top: 3px; display: grid; gap: 2px; }
+  .bullets li { position: relative; padding-left: 12px; }
+  .bullets li::before { content: ''; position: absolute; left: 0; top: .66em; width: 5px; height: 1px; background: var(--ink-3); }
+  .two { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 0 28px; }
+  .certs li { display: flex; justify-content: space-between; gap: 12px; padding-block: 1px; font-size: .86rem; }
+  .edu-list { display: grid; gap: 5px; font-size: .86rem; line-height: 1.35; }
+  .edu-list strong { color: var(--ink); font-weight: 500; }
+  @media (max-width: 680px) {
+    .contact-list { text-align: left; }
+    .skills > div { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 4px; }
+    .two { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  @media print {
+    :global(:root), :global(:root[data-theme]) {
+      --bg: #fff; --surface: #fff; --ink: #111722; --ink-2: #333a45; --ink-3: #565e6b; --rule: #cfd2d0; --signal: #0a6b3a;
+      color-scheme: light;
+    }
+    @page { size: A4; margin: 10mm 14mm; }
+    :global(.bar), :global(.foot), :global(.skip), .actions { display: none !important; }
+    :global(body) { background: #fff; font-size: 9.6pt; }
+    .cv { padding: 0; max-width: none; font-size: 9.2pt; line-height: 1.32; }
+    .head { flex-wrap: nowrap; }
+    h1 { font-size: 26pt; }
+    .title { font-size: 11pt; margin-top: 5px; }
+    .contact-list { font-size: 8.4pt; line-height: 1.38; text-align: right; }
+    section { margin-top: 11px; break-inside: avoid; }
+    h2 { font-size: 7.6pt; margin-bottom: 5px; padding-bottom: 3px; }
+    .skills > div { grid-template-columns: 12.5em minmax(0, 1fr); gap: 10px; padding-block: 0; }
+    .items { gap: 6px; }
+    h3 { font-size: 9.6pt; }
+    .repos { font-size: 7.4pt; }
+    .period { font-size: 7.6pt; }
+    .certs li, .edu-list { font-size: 8.5pt; }
+    .two { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+  }
+</style>

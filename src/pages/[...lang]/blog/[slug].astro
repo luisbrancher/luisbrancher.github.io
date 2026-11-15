@@ -1,0 +1,9 @@
+---
+import { postPaths } from '../../../lib/routes';
+import Page from '../../../themes/runbook/pages/Post.astro';
+
+export const getStaticPaths = postPaths;
+const { post } = Astro.props;
+---
+
+<Page post={post} />

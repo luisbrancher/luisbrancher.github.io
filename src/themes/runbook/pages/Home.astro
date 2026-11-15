@@ -1,0 +1,553 @@
+---
+import Layout from '../Layout.astro';
+import NetworkDiagram from '../components/NetworkDiagram.astro';
+import { person, certs, certDate, vlans, services, loc } from '../../../data/profile';
+// home: conteúdo de data/home.ts
+import { copy, hiring, projects, incidents, principles, jobs, audiovisualJobs, schooling, flow, access, machines, skills, publicRepos, certsOffFocus, credlyUrl, extraCerts, repoUrl } from '../../../data/home';
+import { altLangUrl, formatDate, getPosts, postUrl, readingTime, url, type Lang } from '../../../lib/routes';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = copy[lang];
+const posts = await getPosts(lang);
+// 'texto (nota)' vira o texto com a nota apagada; ' · ' quebra a linha
+const dimNote = (text: string) => text.split(' · ').map((part) => { const [main, note] = part.split(/ (?=\()/); return { main, note }; });
+const latest = posts.slice(0, 3);
+const postHref = (slug: string, anchor?: string) => `${url(lang, `blog/${slug}/`)}${anchor ? `#${anchor}` : ''}`;
+const cvPdf = `/assets/luis-brancher-cv-${lang}.pdf`;
+const sortedCerts = [...certs, ...extraCerts].filter((x) => !certsOffFocus.includes(x.name)).sort((a, b) => b.date.localeCompare(a.date));
+// comandos que rodam de verdade nos repositórios, digitados um a um embaixo dos botões
+const termCmds = [
+  'terraform plan -out=tfplan',
+  'ansible-playbook site.yml --check --diff',
+  'kubectl get pods -A',
+  'git push origin main',
+  'git revert --no-edit HEAD',
+];
+---
+
+<Layout lang={lang} altHref={altLangUrl(lang, 'home')} description={c.description}>
+  <section class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="avail">
+          <span><i aria-hidden="true"></i>{c.available}</span>
+        </p>
+        <h1>Luis Brancher</h1>
+        <p class="role">{c.role}</p>
+        <p class="pitch">{c.pitch}</p>
+        <div class="cta">
+          <a class="btn primary" href={cvPdf} download>{c.cvPdf}</a>
+          <a class="btn ext" href={person.github} target="_blank" rel="noopener">GitHub</a>
+          <a class="btn ext" href={person.linkedin} target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+        <p class="term" aria-hidden="true"><span class="term-ps">$</span> <span class="term-cmd" data-term>{termCmds[0]}</span><span class="term-caret">_</span></p>
+      </div>
+      <dl class="sheet">
+        <div><dt>{c.sheet.now}</dt><dd>{c.sheet.nowV}</dd></div>
+        <div><dt>{c.sheet.proof}</dt><dd><a class="lnk" href={person.github} target="_blank" rel="noopener">{publicRepos.length} {c.sheet.proofV}</a> · <a class="lnk" href={url(lang, 'blog')}>{posts.length} {c.sheet.articles}</a></dd></div>
+        <div><dt>{c.sheet.lab}</dt><dd>{c.sheet.labV}</dd></div>
+        <div><dt>{c.sheet.study}</dt><dd>{dimNote(c.sheet.studyV).map((p, i) => <>{i > 0 && <br />}{p.main}{p.note && <span class="dim"> {p.note}</span>}</>)}</dd></div>
+        {hiring.english && <div><dt>{c.sheet.english}</dt><dd>{dimNote(loc(hiring.english, lang)).map((p) => <>{p.main}{p.note && <span class="dim"> {p.note}</span>}</>)}</dd></div>}
+        {hiring.citizenship && <div><dt>{c.sheet.citizenship}</dt><dd>{loc(hiring.citizenship, lang)}</dd></div>}
+        <div><dt>{c.sheet.location}</dt><dd>{loc(person.location, lang)}</dd></div>
+        {hiring.workMode && <div><dt>{c.sheet.workMode}</dt><dd>{loc(hiring.workMode, lang)}</dd></div>}
+      </dl>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <section class="sec" id="stack">
+      <header class="sec-label">
+        <span class="sec-n">01</span>
+        <h2>{c.stack.title}</h2>
+        <p class="sec-lead">{c.stack.lead}</p>
+      </header>
+      <table class="tbl stack skills">
+        <thead><tr><th>{c.stack.area}</th><th>{c.stack.tools}</th><th>{c.stack.where}</th></tr></thead>
+        <tbody>
+          {skills.map((s) => (
+            <tr>
+              <td class="strong">{loc(s.area, lang)}</td>
+              <td class="tools-cell">
+                {(lang === 'en' ? s.tools.map((t) => t.replace('(estudo)', '(study)')) : s.tools).join(', ')}
+                {s.note && <span class="tool-note">{loc(s.note, lang)}</span>}
+              </td>
+              <td data-label={c.stack.where}>
+                <div class="where">{s.where.map((w) => <a class="lnk mono" href={w.href} target="_blank" rel="noopener">{w.label}</a>)}</div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sec" id="projects">
+      <header class="sec-label">
+        <span class="sec-n">02</span>
+        <h2>{c.projects.title}</h2>
+        <p class="sec-lead">{c.projects.lead}</p>
+      </header>
+      <div class="projects">
+        {projects.map((p) => (
+          <article class="project">
+            <div class="p-main">
+              <h3>{loc(p.name, lang)}</h3>
+              <p class="outcome">{loc(p.outcome, lang)}</p>
+              <p class="tag-list">{p.tags.map((t) => <span>{t}</span>)}</p>
+              <p class="p-links">
+                {p.repos.map((r) => <a class="lnk mono ext" href={repoUrl(r)} target="_blank" rel="noopener">{r}</a>)}
+                {p.post && <a class="lnk" href={postHref(p.post)}>{c.projects.post} →</a>}
+                {p.doc && <a class="lnk ext" href={p.doc.href} target="_blank" rel="noopener">{loc(p.doc.label, lang)}</a>}
+              </p>
+            </div>
+            <details class="p-side">
+              <summary>{c.projects.details}</summary>
+              <h4 class="sub-h">{c.projects.decisions}</h4>
+              <ul class="decisions">{p.decisions[lang].map((d) => <li>{d}</li>)}</ul>
+              {p.open && (<>
+                <h4 class="sub-h open-h">{c.projects.open}</h4>
+                <p class="open">{loc(p.open, lang)}</p>
+              </>)}
+            </details>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="sec" id="incidents">
+      <header class="sec-label">
+        <span class="sec-n">03</span>
+        <h2>{c.incidents.title}</h2>
+        <p class="sec-lead">{c.incidents.lead}</p>
+      </header>
+      <table class="tbl stack inc">
+        <thead><tr><th>{c.incidents.symptom}</th><th>{c.incidents.cause}</th><th>{c.incidents.fix}</th><th><span class="sr-only">Post</span></th></tr></thead>
+        <tbody>
+          {incidents.map((i) => (
+            <tr>
+              <td><code>{loc(i.symptom, lang)}</code></td>
+              <td data-label={c.incidents.cause}>{loc(i.cause, lang)}</td>
+              <td data-label={c.incidents.fix}>{loc(i.fix, lang)}</td>
+              <td class="go">
+                {i.post && <a class="lnk" href={postHref(i.post, i.anchor && loc(i.anchor, lang))}>{c.incidents.read} →</a>}
+                {i.href && <a class="lnk ext" href={loc(i.href, lang)} target="_blank" rel="noopener">{c.incidents.read}</a>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="sec" id="method">
+      <header class="sec-label">
+        <span class="sec-n">04</span>
+        <h2>{c.method.title}</h2>
+        <p class="sec-lead">{c.method.lead}</p>
+      </header>
+      <div>
+      <ol class="principles">
+        {principles.map((x) => (
+          <li>
+            <h3>{loc(x.title, lang)}</h3>
+            <p>{loc(x.text, lang)}</p>
+          </li>
+        ))}
+      </ol>
+      </div>
+    </section>
+
+    <section class="sec" id="homelab">
+      <header class="sec-label">
+        <span class="sec-n">05</span>
+        <h2>{c.homelab.title}</h2>
+        <p class="sec-lead">{c.homelab.lead}</p>
+      </header>
+      <div class="lab">
+        <div>
+          <h3 class="sub-h">{c.homelab.flow}</h3>
+          <ol class="flow" data-flow>
+            {flow.map((s, i) => (
+              <li style={`--i:${i}`}>
+                <span class="f-tool">{s.tool}</span>
+                <span class="f-what">{loc(s.what, lang)}</span>
+                {s.repo && <a class="lnk mono f-repo" href={repoUrl(s.repo)} target="_blank" rel="noopener">{s.repo}</a>}
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div class="lab-tables">
+          <div>
+            <h3 class="sub-h t-h">{c.homelab.vlans}</h3>
+            <table class="tbl">
+              <thead><tr><th>{c.homelab.vlan}</th><th>{c.homelab.id}</th><th>{c.homelab.access}</th></tr></thead>
+              <tbody>
+                {vlans.map((v) => (
+                  <tr><td class="strong"><span class="mono">{v.name}</span></td><td class="mono host">{v.id}</td><td>{access[v.name][lang]}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <h3 class="sub-h t-h mach-h">{c.homelab.machines}</h3>
+            <table class="tbl">
+              <thead><tr><th>{c.homelab.machine}</th><th>{c.homelab.role}</th></tr></thead>
+              <tbody>
+                {machines.map((m) => <tr><td class="strong">{m.name}</td><td>{loc(m.role, lang)}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <h3 class="sub-h t-h">{c.homelab.services}</h3>
+            <table class="tbl">
+              <thead><tr><th>{c.homelab.name}</th><th>{c.homelab.role}</th><th>{c.homelab.host}</th></tr></thead>
+              <tbody>
+                {services.map((x) => (
+                  <tr><td class="strong"><span class="mono">{x.name}</span></td><td>{x.category[lang]}</td><td class="mono host">{x.host}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <p class="note">{c.homelab.inventory}</p>
+          </div>
+        </div>
+        <details class="topo" id="topo">
+          <summary>{c.homelab.diagram}</summary>
+          <NetworkDiagram lang={lang} />
+          <p class="topo-links">
+            <a class="lnk mono" href="/assets/diagram-as-code.d2">{c.homelab.source}</a>
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <section class="sec" id="career">
+      <header class="sec-label">
+        <span class="sec-n">06</span>
+        <h2>{c.career.title}</h2>
+      </header>
+      <div class="career">
+        <p class="about">{c.career.about}</p>
+
+        <div>
+          <h3 class="sub-h t-h">{c.career.experience}</h3>
+          <ol class="jobs">
+            {jobs.map((j) => (
+              <li>
+                <span class="period mono">{loc(j.period, lang)}</span>
+                <div>
+                  <h4>{loc(j.role, lang)}</h4>
+                  <p class="org">{loc(j.org, lang)}</p>
+                  {j.text && <p class="job-summary">{loc(j.text, lang)}</p>}
+                  {j.bullets && <ul>{j.bullets[lang].map((b) => <li>{b}</li>)}</ul>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div>
+          <h3 class="sub-h t-h">{c.career.before}</h3>
+          <ol class="jobs">
+            {audiovisualJobs.map((j) => (
+              <li>
+                <span class="period mono">{loc(j.period, lang)}</span>
+                <div>
+                  <h4>{loc(j.role, lang)}</h4>
+                  <p class="org">{loc(j.org, lang)}</p>
+                  {j.text && <p class="job-summary">{loc(j.text, lang)}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div>
+          <h3 class="sub-h t-h">{c.career.certs}</h3>
+          <table class="tbl stack certs">
+            <thead><tr><th>{c.career.cert}</th><th>{c.career.issuer}</th><th>{c.career.date}</th></tr></thead>
+            <tbody>
+              {sortedCerts.map((x) => (
+                <tr>
+                  <td class="strong">{x.name}</td>
+                  <td>{x.issuer}</td>
+                  <td class="mono nowrap">{certDate(x.date, lang)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p class="note">{c.career.studying} <a class="lnk ext" href={credlyUrl} target="_blank" rel="noopener">{c.career.certsMore}</a></p>
+        </div>
+
+        <div>
+          <h3 class="sub-h t-h">{c.career.education}</h3>
+          <ol class="jobs">
+            {schooling.map((e) => (
+              <li>
+                <span class="period mono">{loc(e.period, lang)}</span>
+                <div>
+                  <h4>{loc(e.title, lang)}</h4>
+                  <p class="org">{e.org}</p>
+                  {e.note && <p class="job-summary">{loc(e.note, lang)}</p>}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="blog">
+      <header class="sec-label">
+        <span class="sec-n">07</span>
+        <h2>{c.blog.title}</h2>
+        <p class="sec-lead">{c.blog.lead}</p>
+      </header>
+      <div>
+        <ul class="posts">
+          {latest.map((p) => (
+            <li>
+              <time class="mono" datetime={p.data.date.toISOString()}>{formatDate(p.data.date, lang)}</time>
+              <div>
+                <h3><a href={postUrl(p)}>{p.data.title}</a></h3>
+                <p>{p.data.description}</p>
+              </div>
+              <span class="mono rt">{readingTime(p)} {c.blog.minRead}</span>
+            </li>
+          ))}
+        </ul>
+        <p class="all"><a class="lnk" href={url(lang, 'blog')}>{c.blog.all} →</a></p>
+      </div>
+    </section>
+  </div>
+
+  <section class="contact" id="contact">
+    <div class="wrap contact-in">
+      <h2>{c.contact.title}</h2>
+      <p>{c.contact.lead}</p>
+      <p class="mail-row">
+        <a class="mail" href={`mailto:${person.email}`}>{person.email}</a>
+        <button class="copy" type="button" data-email={person.email} data-done={c.contact.copied}>{c.contact.copy}</button>
+      </p>
+      <p class="c-links">
+        <a href={cvPdf} download>{c.cvPdf}</a>
+        <a class="ext" href={person.linkedin} target="_blank" rel="noopener">LinkedIn</a>
+        <a class="ext" href={person.github} target="_blank" rel="noopener">GitHub</a>
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ termCmds }}>
+  // digita, espera, apaga e passa para o próximo; sem animação, fica o primeiro comando parado
+  const termEl = document.querySelector('[data-term]');
+  if (termEl && matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      for (let i = 1; ; i = (i + 1) % termCmds.length) {
+        await wait(2200);
+        while (termEl.textContent.length) { termEl.textContent = termEl.textContent.slice(0, -1); await wait(28); }
+        await wait(300);
+        for (const ch of termCmds[i]) { termEl.textContent += ch; await wait(55 + Math.random() * 60); }
+      }
+    })();
+  }
+</script>
+
+<script>
+  document.querySelector<HTMLButtonElement>('.copy')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget as HTMLButtonElement;
+    const label = b.textContent;
+    try {
+      await navigator.clipboard.writeText(b.dataset.email!);
+      b.textContent = b.dataset.done!;
+      setTimeout(() => { b.textContent = label; }, 1800);
+    } catch { location.href = `mailto:${b.dataset.email}`; }
+  });
+
+  // o fluxo acende etapa por etapa, uma vez, quando entra na tela
+  const flowEl = document.querySelector<HTMLElement>('[data-flow]');
+  if (flowEl && matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+    flowEl.classList.add('armed');
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { flowEl.classList.add('run'); io.disconnect(); }
+    }, { threshold: 0.4 });
+    io.observe(flowEl);
+  }
+
+  // no celular o diagrama rola na horizontal: abre centrado no firewall
+  document.querySelector<HTMLDetailsElement>('#topo')?.addEventListener('toggle', (e) => {
+    const net = (e.currentTarget as HTMLElement).querySelector<HTMLElement>('[data-net]');
+    if (net) net.scrollLeft = (net.scrollWidth - net.clientWidth) * 0.42;
+  });
+</script>
+
+<style>
+  /* ---------- hero ---------- */
+  /* sem respiro embaixo: o divisor da primeira seção cai logo abaixo da última linha do .sheet */
+  .hero { padding-block: clamp(28px, 4vw, 48px) 0; }
+  .avail { display: flex; align-items: center; gap: 12px; font: 500 .9rem var(--sans); color: var(--ink); }
+  .avail i { display: inline-block; width: 8px; height: 8px; margin-right: 9px; background: var(--ok); vertical-align: 1px; }
+  /* nome na coluna da esquerda: o tamanho acompanha a largura da coluna, não da página */
+  h1 {
+    margin-top: 14px; font: 700 clamp(2.4rem, 5.85vw, 5.25rem)/.95 var(--display); font-stretch: 118%; white-space: nowrap;
+    letter-spacing: -.035em; color: var(--ink); margin-left: -.04em;
+  }
+  .hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px clamp(32px, 6vw, 96px); align-items: start; }
+  .role { margin-top: 14px; font: 600 clamp(1.25rem, 2.2vw, 1.75rem)/1.2 var(--display); font-stretch: 108%; color: var(--ink); }
+  .pitch { margin-top: 12px; max-width: 34em; font-size: clamp(1.05rem, 1.5vw, 1.2rem); line-height: 1.5; color: var(--ink-2); }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .term { margin-top: 18px; font: 400 .82rem/1.6 var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+  .term-ps { color: var(--signal); }
+  .term-cmd { color: var(--ink-2); }
+  .term-caret { color: var(--signal); }
+  @media (prefers-reduced-motion: no-preference) { .term-caret { animation: caret 1s steps(1) infinite; } }
+  @keyframes caret { 50% { opacity: 0; } }
+  /* o quadro estica até a altura da coluna do nome; a sobra se divide entre as linhas, e cada item fica centrado entre as suas */
+  .sheet { align-self: stretch; display: flex; flex-direction: column; border-top: 1px solid var(--rule-strong); font-size: .92rem; }
+  .sheet > div { flex: 1 1 auto; display: grid; grid-template-columns: 8.5em minmax(0, 1fr); align-content: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+  .sheet dt { font: 400 .78rem/1.8 var(--mono); color: var(--ink-3); }
+  .sheet dd { color: var(--ink); }
+  .sheet .dim { color: var(--ink-3); }
+  .sheet > div:last-child { border-bottom: 0; }
+  @media (max-width: 860px) {
+    .hero-grid { grid-template-columns: minmax(0, 1fr); }
+    h1 { font-size: clamp(2.4rem, 12vw - 4px, 5rem); }
+    .cta .btn { flex: 1 1 auto; }
+    .cta .btn.primary { flex-basis: 100%; }
+  }
+
+  /* ---------- projetos ---------- */
+  .project { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-block: 28px; border-top: 1px solid var(--rule); }
+  .outcome { max-width: 46em; }
+  .p-side summary { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; color: var(--ink); font: 500 .9rem var(--sans); }
+  .p-side summary::before { content: '+'; font: 500 1.1rem var(--mono); color: var(--signal); width: 1em; }
+  .p-side[open] summary::before { content: '−'; }
+  .p-side summary::-webkit-details-marker { display: none; }
+  .p-side[open] summary { margin-bottom: 10px; }
+  .p-side .decisions, .p-side .open { max-width: 46em; }
+  .project:first-child { padding-top: 0; border-top: 0; }
+  .project:last-child { padding-bottom: 0; }
+  .project h3 { font: 600 clamp(1.3rem, 2vw, 1.55rem)/1.15 var(--display); font-stretch: 108%; letter-spacing: -.01em; }
+  .outcome { margin-top: 10px; color: var(--ink); line-height: 1.55; }
+  .project .tag-list { margin-top: 14px; }
+  .p-links { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; font-size: .88rem; }
+  .p-links a { display: inline-flex; align-items: center; min-height: 32px; }
+  .decisions { margin-top: 10px; display: grid; gap: 8px; font-size: .93rem; line-height: 1.5; }
+  .decisions li { padding-left: 14px; position: relative; }
+  .decisions li::before { content: ''; position: absolute; left: 0; top: .62em; width: 6px; height: 1px; background: var(--signal); }
+  .open-h { margin-top: 18px; }
+  .open { margin-top: 8px; font-size: .93rem; }
+  @media (max-width: 1040px) { .project { grid-template-columns: minmax(0, 1fr); } }
+  /* v2: projetos em duas colunas de 3; cada card empurra o detalhe para a base, alinhando os botões da linha */
+  .projects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 clamp(24px, 3.5vw, 48px); align-items: stretch; }
+  .projects .project { display: flex; flex-direction: column; gap: 12px; padding-block: 28px; border-top: 1px solid var(--rule); }
+  .projects .project:nth-child(-n+2) { padding-top: 0; border-top: 0; }
+  .projects .project:nth-last-child(-n+2) { padding-bottom: 0; }
+  .projects .p-side { margin-top: auto; }
+  .projects .outcome, .projects .p-side .decisions, .projects .p-side .open { max-width: none; }
+  @media (max-width: 900px) {
+    .projects { grid-template-columns: minmax(0, 1fr); }
+    .projects .project:nth-child(2) { padding-top: 28px; border-top: 1px solid var(--rule); }
+    .projects .project:nth-last-child(2) { padding-bottom: 28px; }
+  }
+
+  /* ---------- incidentes ---------- */
+  .inc td:first-child { width: 31%; }
+  .inc code { color: var(--signal); font-size: .8rem; line-height: 1.5; }
+  .inc td.go { white-space: nowrap; width: 1%; }
+  .inc td a { display: inline-flex; align-items: center; min-height: 32px; font-size: .88rem; }
+  @media (max-width: 720px) { .inc td:first-child, .inc td.go { width: 100%; } }
+
+  /* ---------- como trabalho ---------- */
+  .principles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px clamp(24px, 4vw, 56px); }
+  @media (max-width: 1040px) { .principles { grid-template-columns: minmax(0, 1fr); } }
+  .principles h3 { font: 600 1.12rem/1.25 var(--display); font-stretch: 106%; letter-spacing: -.005em; padding-top: 12px; border-top: 2px solid var(--signal-fill); }
+  .principles p { margin-top: 8px; font-size: .94rem; line-height: 1.55; }
+
+  /* ---------- homelab ---------- */
+  .mach-h { margin-top: 28px; }
+  .lab { display: grid; gap: 40px; min-width: 0; }
+  .flow { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 14px; border-top: 2px solid var(--rule); }
+  .flow::before { content: ''; position: absolute; left: 0; right: 0; top: -2px; height: 2px; background: var(--signal-fill); transform-origin: 0 50%; }
+  .flow li { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 0 0; }
+  .flow li::before { content: ''; position: absolute; left: 0; top: -6px; width: 10px; height: 10px; background: var(--signal-fill); }
+  .f-tool { font: 600 1.08rem var(--display); font-stretch: 108%; color: var(--ink); }
+  .f-what { font-size: .88rem; line-height: 1.4; }
+  .f-repo { margin-top: 2px; font-size: .75rem; color: var(--ink-3); }
+  .flow.armed::before { transform: scaleX(0); }
+  .flow.armed li { opacity: .25; }
+  .flow.armed.run::before { transform: none; transition: transform 1.3s cubic-bezier(.3,.7,.3,1); }
+  .flow.armed.run li { opacity: 1; transition: opacity .4s; transition-delay: calc(var(--i) * 240ms); }
+  @media (max-width: 760px) {
+    .flow { grid-template-columns: minmax(0, 1fr); border-top: 0; border-left: 2px solid var(--rule); margin-left: 4px; }
+    .flow::before { left: -2px; right: auto; top: 0; bottom: 0; width: 2px; height: auto; transform-origin: 50% 0; }
+    .flow.armed::before { transform: scaleY(0); }
+    .flow li { padding: 0 0 18px 18px; }
+    .flow li:last-child { padding-bottom: 0; }
+    .flow li::before { left: -6px; top: 7px; }
+  }
+  .lab-tables { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px clamp(24px, 4vw, 56px); align-items: start; }
+  @media (max-width: 1040px) { .lab-tables { grid-template-columns: minmax(0, 1fr); } }
+  .t-h { margin-bottom: 12px; }
+  .lab .tbl td { padding-block: 8px; font-size: .88rem; }
+  .host { font-size: .82rem; }
+  .note { margin-top: 10px; font: 400 .78rem/1.5 var(--mono); color: var(--ink-3); }
+  .topo { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); min-width: 0; }
+  .topo summary { display: flex; align-items: center; min-height: 48px; cursor: pointer; color: var(--ink); font-weight: 500; list-style-position: inside; gap: 10px; }
+  .topo summary::before { content: '+'; font: 500 1.1rem var(--mono); color: var(--signal); width: 1em; }
+  .topo[open] summary::before { content: '−'; }
+  .topo summary::-webkit-details-marker { display: none; }
+  .topo-links { display: flex; flex-wrap: wrap; gap: 6px 20px; padding-block: 12px 16px; font-size: .82rem; }
+  /* pacotes correndo pelos cabos parecem tráfego ao vivo, e não são */
+  .topo :global(.packet) { display: none; }
+  .topo :global(.net-wrap) { --v-trusted: #17794a; --v-iot: #a15c00; --v-lab: #6d3fc4; --v-guest: #0b6fb0; }
+  :global(:root[data-theme='dark']) .topo :global(.net-wrap) { --v-trusted: #4fce8d; --v-iot: #fbbf24; --v-lab: #b394fb; --v-guest: #5fbdf5; }
+
+  /* ---------- stack ---------- */
+  .skills td:first-child { width: 26%; }
+  .tools-cell { color: var(--ink); }
+  .tool-note { display: block; margin-top: 3px; font-size: .84rem; line-height: 1.4; color: var(--ink-3); }
+  .where { display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: .8rem; line-height: 1.8; }
+  @media (max-width: 720px) { .skills td:first-child { width: 100%; } }
+
+  /* ---------- trajetória ---------- */
+  .career { display: grid; gap: 40px; min-width: 0; }
+  .about { max-width: none; font-size: 1.08rem; line-height: 1.6; color: var(--ink); }
+  .jobs { display: grid; gap: 28px; }
+  .jobs > li { display: grid; grid-template-columns: 11em minmax(0, 1fr); gap: 4px 24px; }
+  .period { font-size: .82rem; line-height: 1.9; color: var(--ink-3); }
+  .jobs h4 { font-size: 1.05rem; }
+  .job-summary { margin-top: 10px; font-size: .94rem; line-height: 1.5; }
+  .org { font-size: .9rem; color: var(--ink-3); }
+  .jobs ul { margin-top: 10px; display: grid; gap: 6px; font-size: .94rem; line-height: 1.5; }
+  .jobs ul li { padding-left: 14px; position: relative; }
+  .jobs ul li::before { content: ''; position: absolute; left: 0; top: .68em; width: 6px; height: 1px; background: var(--ink-3); }
+  @media (max-width: 620px) { .jobs > li { grid-template-columns: minmax(0, 1fr); } }
+  .certs td { padding-block: 9px; }
+  .certs td:nth-child(2) { white-space: nowrap; }
+  .nowrap { white-space: nowrap; font-size: .82rem; }
+  .cert-id { font-size: .72rem !important; color: var(--ink-3) !important; }
+  @media (max-width: 720px) { .certs td:empty { display: none; } .certs td:nth-child(2) { white-space: normal; } }
+
+  /* ---------- blog ---------- */
+  .posts li { display: grid; grid-template-columns: 8em minmax(0, 1fr) auto; gap: 4px 24px; padding-block: 18px; border-top: 1px solid var(--rule); }
+  .posts li:first-child { padding-top: 0; border-top: 0; }
+  .posts time, .rt { font-size: .8rem; line-height: 2; color: var(--ink-3); }
+  .posts h3 { font-size: 1.08rem; line-height: 1.35; font-weight: 500; }
+  .posts h3 a { text-decoration: none; }
+  .posts h3 a:hover { color: var(--signal); }
+  .posts p { margin-top: 4px; font-size: .93rem; line-height: 1.5; }
+  .all { margin-top: 18px; }
+  @media (max-width: 620px) { .posts li { grid-template-columns: minmax(0, 1fr); } .rt { display: none; } }
+
+  /* ---------- contato ---------- */
+  .contact { background: var(--contact-bg); color: var(--contact-ink-2); padding-block: clamp(56px, 8vw, 104px); }
+  .contact h2 { font: 700 clamp(2rem, 5.6vw, 4.5rem)/1 var(--display); font-stretch: 112%; letter-spacing: -.03em; color: var(--contact-ink); max-width: 16em; }
+  .contact-in > p:first-of-type { margin-top: 14px; }
+  .mail-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 28px; }
+  .mail { font: 500 clamp(1.05rem, 2.6vw, 1.7rem) var(--mono); color: var(--contact-ink); text-decoration: underline; text-decoration-color: var(--contact-accent); text-decoration-thickness: 2px; text-underline-offset: 6px; overflow-wrap: anywhere; }
+  .copy { min-height: 44px; padding: 0 14px; border: 1px solid var(--contact-ink-2); background: none; color: var(--contact-ink); font: 500 .85rem var(--sans); cursor: pointer; }
+  .copy:hover { background: var(--contact-ink); color: var(--contact-bg); }
+  .c-links { display: flex; flex-wrap: wrap; gap: 4px 24px; margin-top: 20px; }
+  .c-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--contact-ink); text-underline-offset: 4px; }
+  .c-links a:hover { color: var(--contact-accent); }
+  .contact :focus-visible { outline-color: var(--contact-accent); }
+</style>
