@@ -1,4 +1,5 @@
-import { defineCollection, z } from 'astro:content';
+import { defineCollection } from 'astro:content';
+import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
 
 // Posts em src/content/blog/<lang>/<slug>.md — o id fica "pt/slug" ou "en/slug".
@@ -10,8 +11,8 @@ const blog = defineCollection({
     date: z.coerce.date(),
     readingTime: z.number().optional(),
     tags: z.array(z.string()).default([]),
-    repo: z.string().url().optional(),
-    repos: z.array(z.string().url()).optional(),
+    repo: z.url().optional(),
+    repos: z.array(z.url()).optional(),
     translationKey: z.string(),
     draft: z.boolean().default(false),
   }),
